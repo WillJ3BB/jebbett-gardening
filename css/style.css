@@ -1,0 +1,423 @@
+/* ── Reset & base ── */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Georgia, serif;
+}
+
+/* ── Header ── */
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 40px;
+    background-color: transparent;
+    position: absolute;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 100;
+}
+
+/* ── Logo ── */
+.logo img {
+    height: 80px;
+    width: auto;
+    max-width: 200px;
+    object-fit: contain;
+}
+
+/* ── Nav links ── */
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+}
+
+nav ul li a {
+    text-decoration: none;
+    color: #fff;
+    font-size: 16px;
+}
+
+nav ul li a:hover {
+    color: rgba(255,255,255,0.7);
+}
+
+/* ── Hero ── */
+.hero {
+    background-color: #2d5a27;
+    color: #fff;
+    padding: 160px 40px 100px;
+    text-align: center;
+}
+
+.hero h1 {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+.hero p {
+    font-size: 20px;
+    margin-bottom: 40px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 15px 35px;
+    background-color: #fff;
+    color: #2d5a27;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 4px;
+}
+
+.btn:hover {
+    background-color: #2d5a27;
+    color: #fff;
+    border: 2px solid #fff;
+}
+
+/* ── Services Summary ── */
+.services-summary {
+    padding: 80px 40px;
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+.services-summary h2 {
+    font-size: 36px;
+    margin-bottom: 40px;
+    color: #222;
+}
+
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.service-card {
+    background-color: #fff;
+    padding: 30px 20px;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.service-card h3 {
+    font-size: 20px;
+    margin-bottom: 12px;
+    color: #2d5a27;
+}
+
+.service-card p {
+    font-size: 15px;
+    color: #555;
+    line-height: 1.6;
+}
+
+.btn-outline {
+    display: inline-block;
+    padding: 12px 30px;
+    border: 2px solid #2d5a27;
+    color: #2d5a27;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 4px;
+}
+
+.btn-outline:hover {
+    background-color: #2d5a27;
+    color: #fff;
+}
+
+/* ── Why Choose Us ── */
+.why-us {
+    padding: 80px 40px;
+    text-align: center;
+    background-color: #2d5a27;
+    color: #fff;
+}
+
+.why-us h2 {
+    font-size: 36px;
+    margin-bottom: 40px;
+}
+
+.why-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 25px;
+}
+
+.why-card {
+    padding: 30px 20px;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
+}
+
+.why-card h3 {
+    font-size: 20px;
+    margin-bottom: 12px;
+}
+
+.why-card p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.85);
+}
+
+/* ── Footer ── */
+footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    padding: 40px;
+    background-color: #222;
+    color: #fff;
+}
+
+.footer-links {
+    display: flex;
+    gap: 25px;
+}
+
+.footer-links a {
+    text-decoration: none;
+    color: #ccc;
+    font-size: 14px;
+}
+
+.footer-links a:hover {
+    color: #fff;
+}
+
+.footer-copy {
+    font-size: 12px;
+    color: #888;
+}
+
+/* ── Page Hero (non-homepage pages) ── */
+.page-hero {
+    background-color: #2d5a27;
+    color: #fff;
+    padding: 160px 40px 80px;
+    text-align: center;
+}
+
+.page-hero h1 {
+    font-size: 42px;
+    margin-bottom: 15px;
+}
+
+.page-hero p {
+    font-size: 18px;
+    color: rgba(255,255,255,0.85);
+}
+
+/* ── About Content ── */
+.about-content {
+    padding: 80px 40px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.about-text h2 {
+    font-size: 28px;
+    color: #2d5a27;
+    margin-bottom: 15px;
+    margin-top: 40px;
+}
+
+.about-text h2:first-child {
+    margin-top: 0;
+}
+
+.about-text p {
+    font-size: 16px;
+    color: #444;
+    line-height: 1.8;
+    margin-bottom: 15px;
+}
+
+.about-text .btn {
+    margin-top: 20px;
+}
+
+/* ── Services List ── */
+.services-list {
+    padding: 80px 40px;
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.service-item {
+    padding: 35px;
+    border-left: 4px solid #2d5a27;
+    background-color: #f9f9f9;
+    border-radius: 0 6px 6px 0;
+}
+
+.service-item h2 {
+    font-size: 24px;
+    color: #2d5a27;
+    margin-bottom: 12px;
+}
+
+.service-item p {
+    font-size: 16px;
+    color: #444;
+    line-height: 1.8;
+}
+
+/* ── Services CTA ── */
+.services-cta {
+    background-color: #f9f9f9;
+    padding: 80px 40px;
+    text-align: center;
+    border-top: 1px solid #e0e0e0;
+}
+
+.services-cta h2 {
+    font-size: 32px;
+    color: #222;
+    margin-bottom: 15px;
+}
+
+.services-cta p {
+    font-size: 18px;
+    color: #555;
+    margin-bottom: 35px;
+}
+
+.services-cta .btn {
+    margin-right: 15px;
+}
+
+/* ── Contact Section ── */
+.contact-section {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 60px;
+    padding: 80px 40px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.contact-details h2 {
+    font-size: 22px;
+    color: #2d5a27;
+    margin-bottom: 15px;
+    margin-top: 35px;
+}
+
+.contact-details h2:first-child {
+    margin-top: 0;
+}
+
+.contact-details p {
+    font-size: 16px;
+    color: #444;
+    line-height: 2;
+}
+
+.contact-details a {
+    color: #444;
+    text-decoration: none;
+}
+
+.contact-details a:hover {
+    color: #2d5a27;
+}
+
+.contact-form h2 {
+    font-size: 22px;
+    color: #2d5a27;
+    margin-bottom: 25px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group textarea {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 15px;
+    font-family: Georgia, serif;
+    color: #333;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #2d5a27;
+}
+
+/* ── Booking Section ── */
+.booking-section {
+    padding: 80px 40px;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.booking-form .btn {
+    width: 100%;
+    text-align: center;
+    padding: 15px;
+    margin-top: 10px;
+}
+
+.form-group select {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 15px;
+    font-family: Georgia, serif;
+    color: #333;
+    background-color: #fff;
+}
+
+.form-group select:focus {
+    outline: none;
+    border-color: #2d5a27;
+}
+/* ── Portfolio Placeholder ── */
+.portfolio-placeholder {
+    padding: 100px 40px;
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.portfolio-placeholder h2 {
+    font-size: 28px;
+    color: #2d5a27;
+    margin-bottom: 20px;
+}
+
+.portfolio-placeholder p {
+    font-size: 16px;
+    color: #555;
+    line-height: 1.8;
+    margin-bottom: 30px;
+}
