@@ -421,3 +421,94 @@ footer {
     line-height: 1.8;
     margin-bottom: 30px;
 }
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+
+    /* Header */
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 15px 20px;
+    }
+
+    nav ul {
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    /* Hero */
+    .hero {
+        padding: 140px 20px 80px;
+    }
+
+    .hero h1 {
+        font-size: 32px;
+    }
+
+    .hero p {
+        font-size: 16px;
+    }
+
+    /* Page Hero */
+    .page-hero {
+        padding: 140px 20px 60px;
+    }
+
+    .page-hero h1 {
+        font-size: 30px;
+    }
+
+    /* Services grid - stack to 1 column */
+    .services-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Why us grid - stack to 1 column */
+    .why-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Contact section - stack */
+    .contact-section {
+        grid-template-columns: 1fr;
+        padding: 40px 20px;
+    }
+
+    /* About */
+    .about-content {
+        padding: 40px 20px;
+    }
+
+    /* Services list */
+    .services-list {
+        padding: 40px 20px;
+    }
+
+    /* Booking */
+    .booking-section {
+        padding: 40px 20px;
+    }
+
+    /* Footer */
+    footer {
+        padding: 40px 20px;
+    }
+
+    .footer-links {
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* Services CTA */
+    .services-cta {
+        padding: 60px 20px;
+    }
+
+    .services-cta .btn {
+        margin-right: 0;
+        margin-bottom: 15px;
+        display: block;
+    }
+}
