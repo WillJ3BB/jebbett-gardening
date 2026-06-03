@@ -512,3 +512,65 @@ footer {
         display: block;
     }
 }
+
+/* ── Auth Pages ── */
+.auth-section {
+    padding: 80px 40px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.auth-form .btn {
+    width: 100%;
+    text-align: center;
+    padding: 15px;
+    margin-top: 10px;
+}
+
+.auth-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: #555;
+}
+
+.auth-link a {
+    color: #2d5a27;
+    text-decoration: none;
+}
+
+.auth-link a:hover {
+    text-decoration: underline;
+}
+
+/* ── Account Page ── */
+.account-section {
+    padding: 80px 40px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.account-welcome {
+    margin-bottom: 40px;
+}
+
+.account-welcome h2 {
+    font-size: 28px;
+    color: #222;
+    margin-bottom: 10px;
+}
+
+.account-welcome p {
+    color: #555;
+    margin-bottom: 20px;
+}
+
+.account-bookings p {
+    color: #555;
+    font-size: 16px;
+}
+
+.account-bookings a {
+    color: #2d5a27;
+    text-decoration: none;
+}
