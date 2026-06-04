@@ -20,7 +20,7 @@ if (contactBtn) {
         emailjs.send('service_6gw0lzk', 'template_bpcanvo', {
             from_name: name,
             from_email: email,
-            message: message
+            message: message,
             to_email: 'William.jebbett01@gmail.com'
         })
         .then(() => {
