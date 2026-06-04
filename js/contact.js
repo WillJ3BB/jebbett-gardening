@@ -21,6 +21,7 @@ if (contactBtn) {
             from_name: name,
             from_email: email,
             message: message
+            to_email: 'William.jebbett01@gmail.com'
         })
         .then(() => {
             alert('Message sent! We will get back to you soon.')
