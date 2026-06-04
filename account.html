@@ -35,19 +35,39 @@
 
     <main>
 
-        <section class="page-hero">
-            <h1>My Account</h1>
-            <p>Manage your bookings and details.</p>
+        <!-- Account Hero -->
+        <section class="account-hero">
+            <div class="account-hero-content">
+                <h1>Welcome back, <span id="user-name">there</span>!</h1>
+                <p>Manage your bookings and get in touch with Jebbett Gardening.</p>
+                <button class="btn-outline-white" id="logout-btn">Log Out</button>
+            </div>
         </section>
 
-        <section class="account-section">
-            <div class="account-welcome">
-                <h2>Welcome, <span id="user-name">there</span>!</h2>
-                <p>Here are your recent bookings.</p>
-                <button class="btn-outline" id="logout-btn">Log Out</button>
-            </div>
-            <div class="account-bookings">
-                <p id="no-bookings">You have no bookings yet. <a href="booking.html">Book a service</a></p>
+        <!-- Quick Actions -->
+        <section class="account-actions">
+            <a href="booking.html" class="action-card">
+                <div class="action-icon">📅</div>
+                <h3>Book a Service</h3>
+                <p>Request a new gardening appointment</p>
+            </a>
+            <a href="services.html" class="action-card">
+                <div class="action-icon">🌿</div>
+                <h3>Our Services</h3>
+                <p>Browse what we offer</p>
+            </a>
+            <a href="contact.html" class="action-card">
+                <div class="action-icon">✉️</div>
+                <h3>Contact Us</h3>
+                <p>Get in touch with our team</p>
+            </a>
+        </section>
+
+        <!-- Bookings -->
+        <section class="account-bookings-section">
+            <h2>Your Bookings</h2>
+            <div id="no-bookings">
+                <p>You have no bookings yet. <a href="booking.html">Book a service</a></p>
             </div>
         </section>
 
