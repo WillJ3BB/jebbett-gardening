@@ -711,3 +711,49 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+
+
+/* ── Booking Cards ── */
+.booking-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.booking-card h3 {
+    font-size: 18px;
+    color: #2d5a27;
+    margin-bottom: 10px;
+    text-transform: capitalize;
+}
+
+.booking-card p {
+    font-size: 15px;
+    color: #444;
+    margin-bottom: 6px;
+}
+
+.booking-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    text-transform: capitalize;
+}
+
+.booking-status.pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.booking-status.confirmed {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.booking-status.completed {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
