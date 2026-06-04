@@ -1,57 +1,69 @@
 // ── Sign Up ──
 const signupBtn = document.getElementById('signup-btn')
 
+async function handleSignup() {
+    const name = document.getElementById('full-name').value
+    const email = document.getElementById('email').value
+    const password = document.getElementById('password').value
+
+    if (!name || !email || !password) {
+        alert('Please fill in all fields')
+        return
+    }
+
+    const { error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+            data: { full_name: name }
+        }
+    })
+
+    if (error) {
+        alert('Error: ' + error.message)
+    } else {
+        alert('Account created! Please check your email to confirm your account.')
+        window.location.href = 'login.html'
+    }
+}
+
 if (signupBtn) {
-    signupBtn.addEventListener('click', async () => {
-        const name = document.getElementById('full-name').value
-        const email = document.getElementById('email').value
-        const password = document.getElementById('password').value
+    signupBtn.addEventListener('click', handleSignup)
 
-        if (!name || !email || !password) {
-            alert('Please fill in all fields')
-            return
-        }
-
-        const { error } = await supabaseClient.auth.signUp({
-            email,
-            password,
-            options: {
-                data: { full_name: name }
-            }
-        })
-
-        if (error) {
-            alert('Error: ' + error.message)
-        } else {
-            alert('Account created! Please check your email to confirm your account.')
-            window.location.href = 'login.html'
-        }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSignup()
     })
 }
 
 // ── Log In ──
 const loginBtn = document.getElementById('login-btn')
 
+async function handleLogin() {
+    const email = document.getElementById('email').value
+    const password = document.getElementById('password').value
+
+    if (!email || !password) {
+        alert('Please fill in all fields')
+        return
+    }
+
+    const { error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+    })
+
+    if (error) {
+        alert('Error: ' + error.message)
+    } else {
+        window.location.href = 'account.html'
+    }
+}
+
 if (loginBtn) {
-    loginBtn.addEventListener('click', async () => {
-        const email = document.getElementById('email').value
-        const password = document.getElementById('password').value
+    loginBtn.addEventListener('click', handleLogin)
 
-        if (!email || !password) {
-            alert('Please fill in all fields')
-            return
-        }
-
-        const { error } = await supabaseClient.auth.signInWithPassword({
-            email,
-            password
-        })
-
-        if (error) {
-            alert('Error: ' + error.message)
-        } else {
-            window.location.href = 'account.html'
-        }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleLogin()
     })
 }
 
@@ -76,7 +88,6 @@ if (window.location.pathname.includes('account.html')) {
             const name = session.user.user_metadata.full_name || 'there'
             document.getElementById('user-name').textContent = name
 
-            // Load user's bookings
             const { data, error } = await supabaseClient
                 .from('bookings')
                 .select('*')
