@@ -37,9 +37,27 @@
 
         <section class="page-hero">
             <h1>Admin Panel</h1>
-            <p>Upload and manage portfolio images.</p>
+            <p>Manage bookings and portfolio images.</p>
         </section>
 
+        <!-- Bookings Management -->
+        <section class="admin-bookings-section">
+            <div class="admin-bookings-header">
+                <h2>Incoming Bookings</h2>
+                <div class="booking-filters">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="pending">Pending</button>
+                    <button class="filter-btn" data-filter="confirmed">Confirmed</button>
+                    <button class="filter-btn" data-filter="completed">Completed</button>
+                    <button class="filter-btn" data-filter="cancelled">Cancelled</button>
+                </div>
+            </div>
+            <div id="bookings-list">
+                <p>Loading bookings...</p>
+            </div>
+        </section>
+
+        <!-- Portfolio Management -->
         <section class="admin-section">
 
             <div class="admin-form">
