@@ -36,10 +36,24 @@ async function handleBooking() {
 
     if (error) {
         alert('Something went wrong: ' + error.message)
-    } else {
-        alert('Booking request received! We will be in touch to confirm.')
-        window.location.href = 'index.html'
+        return
     }
+
+    // Send email notification
+    emailjs.init('ohlaxkcgROilotg3E')
+    emailjs.send('service_6gw0lzk', 'template_7ebfhkm', {
+        full_name: fullName,
+        email: email,
+        phone: phone || 'Not provided',
+        service_type: serviceType.replace(/-/g, ' '),
+        preferred_date: preferredDate,
+        preferred_time: preferredTime || 'Flexible',
+        address: address || 'Not provided',
+        notes: notes || 'None'
+    })
+
+    alert('Booking request received! We will be in touch to confirm.')
+    window.location.href = 'index.html'
 }
 
 if (bookingBtn) {
