@@ -53,7 +53,7 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     // Upload before image
     const beforePath = `before/${Date.now()}-${beforeFile.name}`
     const { error: beforeError } = await supabaseClient.storage
-        .from('portfolio')
+        .from('Portfolio')
         .upload(beforePath, beforeFile)
 
     if (beforeError) {
@@ -65,7 +65,7 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     // Upload after image
     const afterPath = `after/${Date.now()}-${afterFile.name}`
     const { error: afterError } = await supabaseClient.storage
-        .from('portfolio')
+        .from('Portfolio')
         .upload(afterPath, afterFile)
 
     if (afterError) {
@@ -76,11 +76,11 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
 
     // Get public URLs
     const { data: beforeUrl } = supabaseClient.storage
-        .from('portfolio')
+        .from('Portfolio')
         .getPublicUrl(beforePath)
 
     const { data: afterUrl } = supabaseClient.storage
-        .from('portfolio')
+        .from('Portfolio')
         .getPublicUrl(afterPath)
 
     // Save to portfolio table
@@ -113,11 +113,11 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
 async function deleteEntry(id, beforeUrl, afterUrl) {
     if (!confirm('Are you sure you want to delete this entry?')) return
 
-    const beforePath = beforeUrl.split('/portfolio/')[1]
-    const afterPath = afterUrl.split('/portfolio/')[1]
+    const beforePath = beforeUrl.split('/Portfolio/')[1]
+    const afterPath = afterUrl.split('/Portfolio/')[1]
 
-    await supabaseClient.storage.from('portfolio').remove([beforePath])
-    await supabaseClient.storage.from('portfolio').remove([afterPath])
+    await supabaseClient.storage.from('Portfolio').remove([beforePath])
+    await supabaseClient.storage.from('Portfolio').remove([afterPath])
 
     await supabaseClient.from('portfolio').delete().eq('id', id)
 
