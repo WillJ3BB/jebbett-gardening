@@ -807,3 +807,122 @@ footer {
         display: block;
     }
 }
+
+
+/* ── Account Hero ── */
+.account-hero {
+    background-color: #2d5a27;
+    color: #fff;
+    padding: 160px 40px 80px;
+    text-align: center;
+}
+
+.account-hero h1 {
+    font-size: 42px;
+    margin-bottom: 15px;
+}
+
+.account-hero p {
+    font-size: 18px;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 30px;
+}
+
+.btn-outline-white {
+    display: inline-block;
+    padding: 12px 30px;
+    border: 2px solid #fff;
+    color: #fff;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 4px;
+    background: none;
+    cursor: pointer;
+    font-family: Georgia, serif;
+}
+
+.btn-outline-white:hover {
+    background-color: #fff;
+    color: #2d5a27;
+}
+
+/* ── Account Quick Actions ── */
+.account-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+    padding: 60px 40px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.action-card {
+    text-decoration: none;
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 30px 20px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.action-card:hover {
+    border-color: #2d5a27;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.action-icon {
+    font-size: 32px;
+    margin-bottom: 15px;
+}
+
+.action-card h3 {
+    font-size: 18px;
+    color: #2d5a27;
+    margin-bottom: 8px;
+}
+
+.action-card p {
+    font-size: 14px;
+    color: #666;
+}
+
+/* ── Account Bookings Section ── */
+.account-bookings-section {
+    padding: 0 40px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.account-bookings-section h2 {
+    font-size: 28px;
+    color: #222;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.account-bookings-section a {
+    color: #2d5a27;
+    text-decoration: none;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .account-hero {
+        padding: 120px 20px 60px;
+    }
+
+    .account-hero h1 {
+        font-size: 30px;
+    }
+
+    .account-actions {
+        grid-template-columns: 1fr;
+        padding: 40px 20px;
+    }
+
+    .account-bookings-section {
+        padding: 0 20px 60px;
+    }
+}
