@@ -5,23 +5,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jebbett Gardening</title>
-    <meta name="description"
-        content="Jebbett Gardening — professional gardening services across East Sussex. Lawn mowing, hedge trimming, garden clearance and more. Book online today.">
-    <meta name="keywords"
-        content="gardening services East Sussex, lawn mowing Eastbourne, hedge trimming, garden clearance, Jebbett Gardening">
+    <meta name="description" content="Jebbett Gardening — professional gardening services across East Sussex. Lawn mowing, hedge trimming, garden clearance and more. Book online today.">
+    <meta name="keywords" content="gardening services East Sussex, lawn mowing Eastbourne, hedge trimming, garden clearance, Jebbett Gardening">
     <meta property="og:title" content="Jebbett Gardening">
     <meta property="og:description" content="Professional gardening services across East Sussex. Book online today.">
     <meta property="og:url" content="https://jebbettgardeningsolutions.co.uk">
     <link rel="stylesheet" href="css/style.css">
 </head>
 
-<body>
+<body class="home">
 
     <header>
         <div class="logo">
             <img src="images/jebbett-logo.jpeg">
         </div>
-        <nav>
+        <button class="hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <nav id="main-nav">
             <ul>
                 <li><a href="index.html">Home</a></li>
                 <li><a href="about.html">About</a></li>
@@ -41,8 +44,7 @@
         <section class="hero">
             <div class="hero-content">
                 <h1>Professional Gardening Services</h1>
-                <p>Transforming outdoor spaces across the local area. Reliable, skilled and passionate about great
-                    gardens.</p>
+                <p>Transforming outdoor spaces across the local area. Reliable, skilled and passionate about great gardens.</p>
                 <a href="booking.html" class="btn">Book a Service</a>
             </div>
         </section>
@@ -85,12 +87,16 @@
                 </div>
                 <div class="why-card">
                     <h3>✔ Quality Work</h3>
-                    <p>Every job is finished to a high standard — we take pride in the results we
-
-
+                    <p>Every job is finished to a high standard — we take pride in the results we deliver.</p>
+                </div>
+                <div class="why-card">
+                    <h3>✔ Fully Insured</h3>
+                    <p>Complete peace of mind — all our work is fully covered.</p>
+                </div>
+            </div>
+        </section>
 
     </main>
-
 
     <footer>
         <div class="footer-logo">Jebbett Gardening</div>
@@ -110,7 +116,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
     <script src="js/nav.js"></script>
-
+    <script src="js/hamburger.js"></script>
 
 </body>
 

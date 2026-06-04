@@ -4,9 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jebbett Gardening, Contact</title>
-    <meta name="description"
-        content="Get in touch with Jebbett Gardening — based in East Sussex, serving the local area. Call, email or send a message online.">
+    <title>Contact | Jebbett Gardening</title>
+    <meta name="description" content="Get in touch with Jebbett Gardening — based in East Sussex, serving the local area. Call, email or send a message online.">
     <meta property="og:title" content="Contact | Jebbett Gardening">
     <meta property="og:url" content="https://jebbettgardeningsolutions.co.uk/contact.html">
     <link rel="stylesheet" href="css/style.css">
@@ -18,7 +17,12 @@
         <div class="logo">
             <img src="images/jebbett-logo.jpeg">
         </div>
-        <nav>
+        <button class="hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <nav id="main-nav">
             <ul>
                 <li><a href="index.html">Home</a></li>
                 <li><a href="about.html">About</a></li>
@@ -33,25 +37,23 @@
     </header>
 
     <main>
-        <!-- Page content goes here -->
-        <!-- Contact Hero -->
+
         <section class="page-hero">
             <h1>Get In Touch</h1>
             <p>Have a question or want to discuss a job? We'd love to hear from you.</p>
         </section>
 
-        <!-- Contact Section -->
         <section class="contact-section">
 
             <div class="contact-details">
                 <h2>Contact Details</h2>
-                <p>📞 <a href="tel:+44000000000">07886008523</a></p>
-                <p>✉️ <a href="mailto:hello@jebbettgardening.co.uk">William.jebbett01@gmail.com</a></p>
-                <p>📍 Serving the local area: East Sussex</p>
+                <p>📞 <a href="tel:+447886008523">07886 008 523</a></p>
+                <p>✉️ <a href="mailto:William.jebbett01@gmail.com">William.jebbett01@gmail.com</a></p>
+                <p>📍 Serving East Sussex and surrounding areas</p>
                 <h2>Opening Hours</h2>
                 <p>Monday – Friday: 9am – 12pm</p>
-                <p>Saturday: 7am - 5pm</p>
-                <p>Sunday: 7am - 5pm</p>
+                <p>Saturday: 7am – 5pm</p>
+                <p>Sunday: 7am – 5pm</p>
             </div>
 
             <div class="contact-form">
@@ -73,27 +75,29 @@
 
         </section>
 
+    </main>
 
-        <footer>
-            <div class="footer-logo">Jebbett Gardening</div>
-            <div class="footer-links">
-                <a href="index.html">Home</a>
-                <a href="about.html">About</a>
-                <a href="services.html">Services</a>
-                <a href="portfolio.html">Portfolio</a>
-                <a href="booking.html">Book a Service</a>
-                <a href="contact.html">Contact</a>
-            </div>
-            <div class="footer-copy">
-                <p>&copy; 2026 Jebbett Gardening. All rights reserved.</p>
-            </div>
-        </footer>
+    <footer>
+        <div class="footer-logo">Jebbett Gardening</div>
+        <div class="footer-links">
+            <a href="index.html">Home</a>
+            <a href="about.html">About</a>
+            <a href="services.html">Services</a>
+            <a href="portfolio.html">Portfolio</a>
+            <a href="booking.html">Book a Service</a>
+            <a href="contact.html">Contact</a>
+        </div>
+        <div class="footer-copy">
+            <p>&copy; 2026 Jebbett Gardening. All rights reserved.</p>
+        </div>
+    </footer>
 
-        <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-        <script src="js/supabase.js"></script>
-        <script src="js/nav.js"></script>
-        <script src="js/contact.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/contact.js"></script>
+    <script src="js/hamburger.js"></script>
 
 </body>
 

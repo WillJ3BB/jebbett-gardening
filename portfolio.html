@@ -4,11 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio | Jebbett Gardening</title>
-    <meta name="description"
-        content="Before and after photos of completed gardening jobs across East Sussex by Jebbett Gardening.">
-    <meta property="og:title" content="Portfolio | Jebbett Gardening">
-    <meta property="og:url" content="https://jebbettgardeningsolutions.co.uk/portfolio.html">
+    <title>Login | Jebbett Gardening</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -18,7 +14,12 @@
         <div class="logo">
             <img src="images/jebbett-logo.jpeg">
         </div>
-        <nav>
+        <button class="hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <nav id="main-nav">
             <ul>
                 <li><a href="index.html">Home</a></li>
                 <li><a href="about.html">About</a></li>
@@ -35,13 +36,22 @@
     <main>
 
         <section class="page-hero">
-            <h1>Our Work</h1>
-            <p>Before and after transformations from recent jobs across East Sussex.</p>
+            <h1>Welcome Back</h1>
+            <p>Log in to manage your bookings.</p>
         </section>
 
-        <section class="portfolio-section">
-            <div id="portfolio-grid">
-                <p>Loading portfolio...</p>
+        <section class="auth-section">
+            <div class="auth-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" placeholder="Your email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Your password">
+                </div>
+                <button class="btn" id="login-btn">Log In</button>
+                <p class="auth-link">Don't have an account? <a href="signup.html">Sign up here</a></p>
             </div>
         </section>
 
@@ -64,8 +74,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
-    <script src="js/portfolio.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/nav.js"></script>
+    <script src="js/hamburger.js"></script>
 
 </body>
 

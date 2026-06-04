@@ -4,9 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jebbett Gardening, Services</title>
-    <meta name="description"
-        content="Gardening services offered by Jebbett Gardening — lawn mowing, hedge trimming, garden clearance, regular maintenance and more across East Sussex.">
+    <title>Services | Jebbett Gardening</title>
+    <meta name="description" content="Gardening services offered by Jebbett Gardening — lawn mowing, hedge trimming, garden clearance, regular maintenance and more across East Sussex.">
     <meta property="og:title" content="Services | Jebbett Gardening">
     <meta property="og:url" content="https://jebbettgardeningsolutions.co.uk/services.html">
     <link rel="stylesheet" href="css/style.css">
@@ -18,7 +17,12 @@
         <div class="logo">
             <img src="images/jebbett-logo.jpeg">
         </div>
-        <nav>
+        <button class="hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <nav id="main-nav">
             <ul>
                 <li><a href="index.html">Home</a></li>
                 <li><a href="about.html">About</a></li>
@@ -33,74 +37,64 @@
     </header>
 
     <main>
-        <!-- Page content goes here -->
-        <!-- Services Hero -->
+
         <section class="page-hero">
             <h1>Our Services</h1>
             <p>Everything your garden needs, done properly.</p>
         </section>
 
-        <!-- Services List -->
         <section class="services-list">
 
             <div class="service-item">
                 <div class="service-item-text">
                     <h2>Lawn Mowing</h2>
-                    <p>Regular cuts to keep your lawn looking neat, healthy and well maintained throughout the year. We
-                        work around your schedule and can set up regular weekly or fortnightly visits.</p>
+                    <p>Regular cuts to keep your lawn looking neat, healthy and well maintained throughout the year. We work around your schedule and can set up regular weekly or fortnightly visits.</p>
                 </div>
             </div>
 
             <div class="service-item">
                 <div class="service-item-text">
                     <h2>Hedge Trimming</h2>
-                    <p>Clean, precise trimming of hedges, bushes and borders. We'll shape them to your preference and
-                        clear up all the cuttings afterwards.</p>
+                    <p>Clean, precise trimming of hedges, bushes and borders. We'll shape them to your preference and clear up all the cuttings afterwards.</p>
                 </div>
             </div>
 
             <div class="service-item">
                 <div class="service-item-text">
                     <h2>Garden Clearance</h2>
-                    <p>Full clearance of overgrown, neglected or end-of-season gardens. We remove weeds, cut back
-                        overgrowth, and leave the space clean and ready to use.</p>
+                    <p>Full clearance of overgrown, neglected or end-of-season gardens. We remove weeds, cut back overgrowth, and leave the space clean and ready to use.</p>
                 </div>
             </div>
 
             <div class="service-item">
                 <div class="service-item-text">
                     <h2>Regular Maintenance</h2>
-                    <p>Scheduled visits to keep your garden in top condition all year round. We tailor each visit to
-                        what your garden needs at that time of year.</p>
+                    <p>Scheduled visits to keep your garden in top condition all year round. We tailor each visit to what your garden needs at that time of year.</p>
                 </div>
             </div>
 
             <div class="service-item">
                 <div class="service-item-text">
                     <h2>Planting & Borders</h2>
-                    <p>Seasonal planting, border maintenance and weeding to keep your garden beds looking full and
-                        colourful.</p>
+                    <p>Seasonal planting, border maintenance and weeding to keep your garden beds looking full and colourful.</p>
                 </div>
             </div>
 
             <div class="service-item">
                 <div class="service-item-text">
                     <h2>One-Off Tidy Ups</h2>
-                    <p>Need a quick tidy before an event or just want a fresh start? We offer flexible one-off visits
-                        with no commitment required.</p>
+                    <p>Need a quick tidy before an event or just want a fresh start? We offer flexible one-off visits with no commitment required.</p>
                 </div>
             </div>
 
         </section>
 
-        <!-- CTA -->
         <section class="services-cta">
             <h2>Ready to get started?</h2>
             <p>Book a service online or get in touch to discuss what you need.</p>
             <a href="booking.html" class="btn">Book a Service</a>
             <a href="contact.html" class="btn-outline">Contact Us</a>
         </section>
-
 
     </main>
 
@@ -122,6 +116,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
     <script src="js/nav.js"></script>
+    <script src="js/hamburger.js"></script>
 
 </body>
 
