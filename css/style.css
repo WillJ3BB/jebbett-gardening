@@ -574,3 +574,73 @@ footer {
     color: #2d5a27;
     text-decoration: none;
 }
+/* ── Admin Section ── */
+.admin-section {
+    padding: 80px 40px;
+    max-width: 900px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+}
+
+.admin-form h2,
+.admin-entries h2 {
+    font-size: 24px;
+    color: #2d5a27;
+    margin-bottom: 25px;
+}
+
+.admin-form .btn {
+    width: 100%;
+    text-align: center;
+    padding: 15px;
+    margin-top: 10px;
+}
+
+#upload-status {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #2d5a27;
+    text-align: center;
+}
+
+.entry-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.entry-card h3 {
+    font-size: 16px;
+    color: #222;
+    margin-bottom: 8px;
+}
+
+.entry-card p {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+.entry-card button {
+    background: none;
+    border: 1px solid #cc0000;
+    color: #cc0000;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.entry-card button:hover {
+    background-color: #cc0000;
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .admin-section {
+        grid-template-columns: 1fr;
+    }
+}
