@@ -31,6 +31,27 @@ header {
     object-fit: contain;
 }
 
+/* ── Hamburger Button ── */
+.hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    z-index: 200;
+}
+
+.hamburger span {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background-color: #fff;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+}
+
 /* ── Nav links ── */
 nav ul {
     list-style: none;
@@ -74,6 +95,8 @@ nav ul li a:hover {
     text-decoration: none;
     font-size: 16px;
     border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
 }
 
 .btn:hover {
@@ -401,117 +424,6 @@ footer {
     outline: none;
     border-color: #2d5a27;
 }
-/* ── Portfolio Placeholder ── */
-.portfolio-placeholder {
-    padding: 100px 40px;
-    text-align: center;
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.portfolio-placeholder h2 {
-    font-size: 28px;
-    color: #2d5a27;
-    margin-bottom: 20px;
-}
-
-.portfolio-placeholder p {
-    font-size: 16px;
-    color: #555;
-    line-height: 1.8;
-    margin-bottom: 30px;
-}
-/* ── Mobile Responsive ── */
-@media (max-width: 768px) {
-
-    /* Header */
-    header {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 15px 20px;
-    }
-
-    nav ul {
-        flex-direction: column;
-        gap: 10px;
-        margin-top: 15px;
-    }
-
-    /* Hero */
-    .hero {
-        padding: 140px 20px 80px;
-    }
-
-    .hero h1 {
-        font-size: 32px;
-    }
-
-    .hero p {
-        font-size: 16px;
-    }
-
-    /* Page Hero */
-    .page-hero {
-        padding: 140px 20px 60px;
-    }
-
-    .page-hero h1 {
-        font-size: 30px;
-    }
-
-    /* Services grid - stack to 1 column */
-    .services-grid {
-        grid-template-columns: 1fr;
-    }
-
-    /* Why us grid - stack to 1 column */
-    .why-grid {
-        grid-template-columns: 1fr;
-    }
-
-    /* Contact section - stack */
-    .contact-section {
-        grid-template-columns: 1fr;
-        padding: 40px 20px;
-    }
-
-    /* About */
-    .about-content {
-        padding: 40px 20px;
-    }
-
-    /* Services list */
-    .services-list {
-        padding: 40px 20px;
-    }
-
-    /* Booking */
-    .booking-section {
-        padding: 40px 20px;
-    }
-
-    /* Footer */
-    footer {
-        padding: 40px 20px;
-    }
-
-    .footer-links {
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-    }
-
-    /* Services CTA */
-    .services-cta {
-        padding: 60px 20px;
-    }
-
-    .services-cta .btn {
-        margin-right: 0;
-        margin-bottom: 15px;
-        display: block;
-    }
-}
 
 /* ── Auth Pages ── */
 .auth-section {
@@ -574,6 +486,7 @@ footer {
     color: #2d5a27;
     text-decoration: none;
 }
+
 /* ── Admin Section ── */
 .admin-section {
     padding: 80px 40px;
@@ -639,13 +552,6 @@ footer {
     color: #fff;
 }
 
-@media (max-width: 768px) {
-    .admin-section {
-        grid-template-columns: 1fr;
-    }
-}
-
-
 /* ── Portfolio Section ── */
 .portfolio-section {
     padding: 80px 40px;
@@ -706,14 +612,6 @@ footer {
     border-radius: 4px;
 }
 
-@media (max-width: 768px) {
-    .portfolio-images {
-        grid-template-columns: 1fr;
-    }
-}
-
-
-
 /* ── Booking Cards ── */
 .booking-card {
     border: 1px solid #e0e0e0;
@@ -756,4 +654,156 @@ footer {
 .booking-status.completed {
     background-color: #d1ecf1;
     color: #0c5460;
+}
+
+/* ════════════════════════════
+   MOBILE RESPONSIVE
+════════════════════════════ */
+@media (max-width: 768px) {
+
+    /* ── Header ── */
+    header {
+        position: fixed;
+        background-color: #2d5a27;
+        padding: 12px 20px;
+        flex-wrap: nowrap;
+        top: 0;
+        left: 0;
+        width: 100%;
+    }
+
+    /* ── Logo ── */
+    .logo img {
+        height: 50px;
+    }
+
+    /* ── Show hamburger ── */
+    .hamburger {
+        display: flex;
+    }
+
+    /* ── Hide nav by default on mobile ── */
+    #main-nav {
+        display: none;
+        position: fixed;
+        top: 74px;
+        left: 0;
+        width: 100%;
+        background-color: #2d5a27;
+        z-index: 99;
+        padding-bottom: 10px;
+    }
+
+    #main-nav.open {
+        display: block;
+    }
+
+    #main-nav ul {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    #main-nav ul li a {
+        display: block;
+        padding: 14px 20px;
+        color: #fff;
+        font-size: 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    #main-nav ul li a:hover {
+        background-color: rgba(255,255,255,0.1);
+    }
+
+    /* ── Push content below fixed header ── */
+    .hero {
+        padding: 120px 20px 80px;
+    }
+
+    .page-hero {
+        padding: 120px 20px 60px;
+    }
+
+    /* ── Typography ── */
+    .hero h1 {
+        font-size: 32px;
+    }
+
+    .hero p {
+        font-size: 16px;
+    }
+
+    .page-hero h1 {
+        font-size: 28px;
+    }
+
+    /* ── Grids stack to 1 column ── */
+    .services-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .why-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .portfolio-images {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-section {
+        grid-template-columns: 1fr;
+    }
+
+    /* ── Contact ── */
+    .contact-section {
+        grid-template-columns: 1fr;
+        padding: 40px 20px;
+    }
+
+    /* ── Spacing ── */
+    .about-content {
+        padding: 40px 20px;
+    }
+
+    .services-list {
+        padding: 40px 20px;
+    }
+
+    .booking-section {
+        padding: 40px 20px;
+    }
+
+    .auth-section {
+        padding: 40px 20px;
+    }
+
+    .account-section {
+        padding: 40px 20px;
+    }
+
+    .portfolio-section {
+        padding: 40px 20px;
+    }
+
+    /* ── Footer ── */
+    footer {
+        padding: 40px 20px;
+    }
+
+    .footer-links {
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* ── Services CTA ── */
+    .services-cta {
+        padding: 60px 20px;
+    }
+
+    .services-cta .btn {
+        margin-right: 0;
+        margin-bottom: 15px;
+        display: block;
+    }
 }
