@@ -43,29 +43,54 @@
 
         <section class="page-hero">
             <h1>Book a Service</h1>
-            <p>Fill in the form below and we'll get back to you to confirm your booking.</p>
-            <p> !Bookings will be unavailable until further notice thank you!</p>
+            <p>Select a date and fill in your details — we'll confirm your appointment shortly.</p>
         </section>
 
         <section class="booking-section">
 
-            <div class="booking-form">
+            <!-- Step 1: Date Picker -->
+            <div class="booking-step" id="step-1">
+                <h2>Step 1 — Choose a Date</h2>
+                <div class="calendar-nav">
+                    <button id="prev-month">&#8592;</button>
+                    <span id="calendar-title"></span>
+                    <button id="next-month">&#8594;</button>
+                </div>
+                <div class="calendar-grid" id="calendar-grid">
+                    <div class="calendar-day-header">Mon</div>
+                    <div class="calendar-day-header">Tue</div>
+                    <div class="calendar-day-header">Wed</div>
+                    <div class="calendar-day-header">Thu</div>
+                    <div class="calendar-day-header">Fri</div>
+                    <div class="calendar-day-header">Sat</div>
+                    <div class="calendar-day-header">Sun</div>
+                </div>
+            </div>
 
+            <!-- Step 2: Time Slot -->
+            <div class="booking-step" id="step-2" style="display:none;">
+                <h2>Step 2 — Choose a Time</h2>
+                <p id="selected-date-display"></p>
+                <div class="time-slots" id="time-slots"></div>
+                <button class="btn-outline" id="back-to-step-1">← Back</button>
+            </div>
+
+            <!-- Step 3: Your Details -->
+            <div class="booking-step" id="step-3" style="display:none;">
+                <h2>Step 3 — Your Details</h2>
+                <p id="selected-slot-display"></p>
                 <div class="form-group">
                     <label for="full-name">Full Name</label>
                     <input type="text" id="full-name" placeholder="Your full name">
                 </div>
-
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <input type="email" id="email" placeholder="Your email">
                 </div>
-
                 <div class="form-group">
                     <label for="phone">Phone Number</label>
                     <input type="tel" id="phone" placeholder="Your phone number">
                 </div>
-
                 <div class="form-group">
                     <label for="service">Service Required</label>
                     <select id="service">
@@ -78,34 +103,18 @@
                         <option value="one-off-tidy">One-Off Tidy Up</option>
                     </select>
                 </div>
-
-                <div class="form-group">
-                    <label for="date">Preferred Date</label>
-                    <input type="date" id="date">
-                </div>
-
-                <div class="form-group">
-                    <label for="time">Preferred Time</label>
-                    <select id="time">
-                        <option value="">-- Select a time --</option>
-                        <option value="morning">Morning (7am – 12pm)</option>
-                        <option value="afternoon">Afternoon (12pm – 5pm)</option>
-                        <option value="flexible">Flexible</option>
-                    </select>
-                </div>
-
                 <div class="form-group">
                     <label for="address">Address</label>
                     <input type="text" id="address" placeholder="Your address">
                 </div>
-
                 <div class="form-group">
                     <label for="notes">Additional Notes</label>
-                    <textarea id="notes" rows="5" placeholder="Any extra details about the job..."></textarea>
+                    <textarea id="notes" rows="4" placeholder="Any extra details about the job..."></textarea>
                 </div>
-
-                <button class="btn">Submit Booking Request</button>
-
+                <div class="booking-form-actions">
+                    <button class="btn-outline" id="back-to-step-2">← Back</button>
+                    <button class="btn" id="submit-booking">Submit Booking</button>
+                </div>
             </div>
 
         </section>
