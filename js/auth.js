@@ -29,7 +29,6 @@ async function handleSignup() {
 
 if (signupBtn) {
     signupBtn.addEventListener('click', handleSignup)
-
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') handleSignup()
     })
@@ -61,7 +60,6 @@ async function handleLogin() {
 
 if (loginBtn) {
     loginBtn.addEventListener('click', handleLogin)
-
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') handleLogin()
     })
@@ -79,6 +77,9 @@ if (logoutBtn) {
 
 // ── Protect account page ──
 if (window.location.pathname.includes('account.html')) {
+
+    let bookingToCancel = null
+
     async function checkSession() {
         const { data: { session } } = await supabaseClient.auth.getSession()
 
@@ -108,9 +109,62 @@ if (window.location.pathname.includes('account.html')) {
                     <p><strong>Time:</strong> ${booking.preferred_time || 'Flexible'}</p>
                     <p><strong>Address:</strong> ${booking.address || 'Not specified'}</p>
                     <p><strong>Status:</strong> <span class="booking-status ${booking.status}">${booking.status}</span></p>
+                    ${booking.status !== 'cancelled' && booking.status !== 'completed' ? `
+                        <button class="cancel-booking-btn" data-id="${booking.id}">Cancel Booking</button>
+                    ` : ''}
                 </div>
             `).join('')
+
+            // ── Cancel button click — show modal ──
+            document.querySelectorAll('.cancel-booking-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    bookingToCancel = btn.dataset.id
+                    document.getElementById('cancel-modal').style.display = 'flex'
+                })
+            })
         }
     }
     checkSession()
+
+    // ── Close modal ──
+    const closeModalBtn = document.getElementById('close-modal-btn')
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            document.getElementById('cancel-modal').style.display = 'none'
+            bookingToCancel = null
+        })
+    }
+
+    // ── Close modal on overlay click ──
+    const modal = document.getElementById('cancel-modal')
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none'
+                bookingToCancel = null
+            }
+        })
+    }
+
+    // ── Confirm cancellation ──
+    const confirmCancelBtn = document.getElementById('confirm-cancel-btn')
+    if (confirmCancelBtn) {
+        confirmCancelBtn.addEventListener('click', async () => {
+            if (!bookingToCancel) return
+
+            const { error } = await supabaseClient
+                .from('bookings')
+                .update({ status: 'cancelled' })
+                .eq('id', bookingToCancel)
+
+            if (error) {
+                alert('Error cancelling booking: ' + error.message)
+                return
+            }
+
+            document.getElementById('cancel-modal').style.display = 'none'
+            bookingToCancel = null
+            checkSession()
+        })
+    }
 }

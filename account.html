@@ -35,9 +35,26 @@
         </nav>
     </header>
 
+    <!-- Cancellation Policy Popup -->
+    <div id="cancel-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <h2>Cancellation Policy</h2>
+            <p>Before cancelling your booking, please read our cancellation policy:</p>
+            <ul>
+                <li><strong>More than 24 hours notice</strong> — free of charge</li>
+                <li><strong>Less than 24 hours notice</strong> — 75% call-out fee applies</li>
+            </ul>
+            <p>By confirming, you acknowledge that a fee may apply depending on when your appointment is scheduled.</p>
+            <p>If you have any questions please <a href="contact.html">contact us directly</a>.</p>
+            <div class="modal-actions">
+                <button class="btn" id="confirm-cancel-btn">Confirm Cancellation</button>
+                <button class="btn-outline" id="close-modal-btn">Go Back</button>
+            </div>
+        </div>
+    </div>
+
     <main>
 
-        <!-- Account Hero -->
         <section class="account-hero">
             <div class="account-hero-content">
                 <h1>Welcome back, <span id="user-name">there</span>!</h1>
@@ -46,7 +63,6 @@
             </div>
         </section>
 
-        <!-- Quick Actions -->
         <section class="account-actions">
             <a href="booking.html" class="action-card">
                 <div class="action-icon">📅</div>
@@ -65,7 +81,6 @@
             </a>
         </section>
 
-        <!-- Bookings -->
         <section class="account-bookings-section">
             <h2>Your Bookings</h2>
             <div id="no-bookings">
