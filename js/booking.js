@@ -11,10 +11,10 @@ let bookedCounts = {}
 
 // ── Capacity per day ──
 function getCapacity(date) {
-    const day = date.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
-    if (day === 1 || day === 2 || day === 3 || day === 4) return 2 // Mon-Thu
-    if (day === 5) return 8 // Fri
-    if (day === 6 || day === 0) return 6 // Sat-Sun
+    const day = date.getDay()
+    if (day === 1 || day === 2 || day === 3 || day === 4) return 2
+    if (day === 5) return 8
+    if (day === 6 || day === 0) return 6
     return 0
 }
 
@@ -57,7 +57,6 @@ function renderCalendar() {
     const grid = document.getElementById('calendar-grid')
     const title = document.getElementById('calendar-title')
 
-    // Clear existing day cells (keep headers)
     const headers = grid.querySelectorAll('.calendar-day-header')
     grid.innerHTML = ''
     headers.forEach(h => grid.appendChild(h))
@@ -68,22 +67,18 @@ function renderCalendar() {
     const firstDay = new Date(currentYear, currentMonth, 1)
     const lastDay = new Date(currentYear, currentMonth + 1, 0)
 
-    // Monday = 0 offset
     let startOffset = firstDay.getDay() - 1
     if (startOffset < 0) startOffset = 6
 
-    // Max booking date — 5 weeks ahead
     const maxDate = new Date(today)
     maxDate.setDate(maxDate.getDate() + 35)
 
-    // Empty cells before first day
     for (let i = 0; i < startOffset; i++) {
         const empty = document.createElement('div')
         empty.classList.add('calendar-cell', 'empty')
         grid.appendChild(empty)
     }
 
-    // Day cells
     for (let d = 1; d <= lastDay.getDate(); d++) {
         const date = new Date(currentYear, currentMonth, d)
         const dateStr = date.toISOString().split('T')[0]
@@ -117,14 +112,12 @@ function selectDate(date, dateStr) {
     selectedDate = dateStr
     renderCalendar()
 
-    // Show step 2
     document.getElementById('step-1').style.display = 'none'
     document.getElementById('step-2').style.display = 'block'
 
     const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
     document.getElementById('selected-date-display').textContent = `Selected: ${date.toLocaleDateString('en-GB', options)}`
 
-    // Render time slots
     const slots = getTimeSlots(date)
     const bookedSlots = bookedCounts[dateStr] || {}
     const slotsContainer = document.getElementById('time-slots')
@@ -227,6 +220,19 @@ async function handleBooking() {
     if (error) {
         alert('Something went wrong: ' + error.message)
     } else {
+        // ── Send email notification ──
+        emailjs.init('ohlaxkcgROilotg3E')
+        emailjs.send('service_6gw0lzk', 'template_7ebfhkm', {
+            full_name: fullName,
+            email: email,
+            phone: phone || 'Not provided',
+            service_type: serviceType,
+            preferred_date: selectedDate,
+            preferred_time: selectedTime,
+            address: address,
+            notes: notes || 'None'
+        })
+
         alert('Booking request received! We will be in touch to confirm.')
         window.location.href = 'index.html'
     }
