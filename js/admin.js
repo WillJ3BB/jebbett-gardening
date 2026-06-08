@@ -93,14 +93,18 @@ async function loadEntries() {
         return
     }
 
-    list.innerHTML = data.map(entry => `
-        <div class="entry-card">
-            <h3>${entry.title}</h3>
-            <p>${entry.description || ''}</p>
-            <p><strong>Location:</strong> ${entry.location || 'Not specified'}</p>
-            <button onclick="deleteEntry('${entry.id}', '${entry.before_image_url}', '${entry.after_image_url}')">Delete</button>
-        </div>
-    `).join('')
+    list.innerHTML = data.map(entry => {
+        const images = entry.image_urls || [entry.before_image_url, entry.after_image_url].filter(Boolean)
+        return `
+            <div class="entry-card">
+                <h3>${entry.title}</h3>
+                <p>${entry.description || ''}</p>
+                <p><strong>Location:</strong> ${entry.location || 'Not specified'}</p>
+                <p><strong>Photos:</strong> ${images.length}</p>
+                <button onclick="deleteEntry('${entry.id}', ${JSON.stringify(images).replace(/"/g, '&quot;')})">Delete</button>
+            </div>
+        `
+    }).join('')
 }
 loadEntries()
 
@@ -109,12 +113,17 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     const title = document.getElementById('title').value
     const description = document.getElementById('description').value
     const location = document.getElementById('location').value
-    const beforeFile = document.getElementById('before-image').files[0]
-    const afterFile = document.getElementById('after-image').files[0]
+    const files = document.getElementById('portfolio-images').files
     const status = document.getElementById('upload-status')
 
-    if (!title || !beforeFile || !afterFile) {
-        status.textContent = 'Please fill in the title and both photos'
+    if (!title || files.length < 2) {
+        status.textContent = 'Please add a title and at least 2 photos'
+        status.style.color = 'red'
+        return
+    }
+
+    if (files.length > 5) {
+        status.textContent = 'Maximum 5 photos allowed'
         status.style.color = 'red'
         return
     }
@@ -122,35 +131,29 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     status.textContent = 'Uploading...'
     status.style.color = '#2d5a27'
 
-    const beforePath = `before/${Date.now()}-${beforeFile.name}`
-    const { error: beforeError } = await supabaseClient.storage
-        .from('Portfolio')
-        .upload(beforePath, beforeFile)
+    const imageUrls = []
 
-    if (beforeError) {
-        status.textContent = 'Error uploading before image: ' + beforeError.message
-        status.style.color = 'red'
-        return
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const path = `progress/${Date.now()}-${i}-${file.name}`
+
+        const { error: uploadError } = await supabaseClient.storage
+            .from('Portfolio')
+            .upload(path, file)
+
+        if (uploadError) {
+            status.textContent = `Error uploading photo ${i + 1}: ${uploadError.message}`
+            status.style.color = 'red'
+            return
+        }
+
+        const { data: urlData } = supabaseClient.storage
+            .from('Portfolio')
+            .getPublicUrl(path)
+
+        imageUrls.push(urlData.publicUrl)
+        status.textContent = `Uploading ${i + 1} of ${files.length}...`
     }
-
-    const afterPath = `after/${Date.now()}-${afterFile.name}`
-    const { error: afterError } = await supabaseClient.storage
-        .from('Portfolio')
-        .upload(afterPath, afterFile)
-
-    if (afterError) {
-        status.textContent = 'Error uploading after image: ' + afterError.message
-        status.style.color = 'red'
-        return
-    }
-
-    const { data: beforeUrl } = supabaseClient.storage
-        .from('Portfolio')
-        .getPublicUrl(beforePath)
-
-    const { data: afterUrl } = supabaseClient.storage
-        .from('Portfolio')
-        .getPublicUrl(afterPath)
 
     const { error: insertError } = await supabaseClient
         .from('portfolio')
@@ -158,8 +161,10 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
             title,
             description,
             location,
-            before_image_url: beforeUrl.publicUrl,
-            after_image_url: afterUrl.publicUrl
+            image_urls: imageUrls,
+            image_count: imageUrls.length,
+            before_image_url: imageUrls[0],
+            after_image_url: imageUrls[imageUrls.length - 1]
         }])
 
     if (insertError) {
@@ -168,26 +173,54 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
         return
     }
 
-    status.textContent = 'Entry uploaded successfully!'
+    status.textContent = `Entry uploaded successfully with ${imageUrls.length} photos!`
     document.getElementById('title').value = ''
     document.getElementById('description').value = ''
     document.getElementById('location').value = ''
-    document.getElementById('before-image').value = ''
-    document.getElementById('after-image').value = ''
+    document.getElementById('portfolio-images').value = ''
+    document.getElementById('image-preview').innerHTML = ''
     loadEntries()
 })
 
+// ── Image preview ──
+document.getElementById('portfolio-images').addEventListener('change', (e) => {
+    const preview = document.getElementById('image-preview')
+    const files = e.target.files
+    preview.innerHTML = ''
+
+    if (files.length > 5) {
+        preview.innerHTML = '<p style="color:red">Maximum 5 photos allowed</p>'
+        return
+    }
+
+    Array.from(files).forEach((file, i) => {
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+            const total = files.length
+            let label = ''
+            if (i === 0) label = 'Before'
+            else if (i === total - 1) label = 'After'
+
+            preview.innerHTML += `
+                <div class="image-preview-item">
+                    <img src="${ev.target.result}" alt="Preview ${i + 1}">
+                    ${label ? `<span class="preview-label">${label}</span>` : ''}
+                </div>
+            `
+        }
+        reader.readAsDataURL(file)
+    })
+})
+
 // ── Delete portfolio entry ──
-async function deleteEntry(id, beforeUrl, afterUrl) {
+async function deleteEntry(id, imageUrls) {
     if (!confirm('Are you sure you want to delete this entry?')) return
 
-    const beforePath = beforeUrl.split('/Portfolio/')[1]
-    const afterPath = afterUrl.split('/Portfolio/')[1]
-
-    await supabaseClient.storage.from('Portfolio').remove([beforePath])
-    await supabaseClient.storage.from('Portfolio').remove([afterPath])
+    for (const url of imageUrls) {
+        const path = url.split('/Portfolio/')[1]
+        if (path) await supabaseClient.storage.from('Portfolio').remove([path])
+    }
 
     await supabaseClient.from('portfolio').delete().eq('id', id)
-
     loadEntries()
 }
