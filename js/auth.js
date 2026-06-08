@@ -102,18 +102,54 @@ if (window.location.pathname.includes('account.html')) {
                 return
             }
 
-            bookingsDiv.innerHTML = data.map(booking => `
-                <div class="booking-card">
-                    <h3>${booking.service_type.replace(/-/g, ' ')}</h3>
-                    <p><strong>Date:</strong> ${new Date(booking.preferred_date).toLocaleDateString('en-GB')}</p>
-                    <p><strong>Time:</strong> ${booking.preferred_time || 'Flexible'}</p>
-                    <p><strong>Address:</strong> ${booking.address || 'Not specified'}</p>
-                    <p><strong>Status:</strong> <span class="booking-status ${booking.status}">${booking.status}</span></p>
-                    ${booking.status !== 'cancelled' && booking.status !== 'completed' ? `
-                        <button class="cancel-booking-btn" data-id="${booking.id}">Cancel Booking</button>
-                    ` : ''}
-                </div>
-            `).join('')
+            // ── Split active and cancelled ──
+            const thirtyDaysAgo = new Date()
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+            const activeBookings = data.filter(b => b.status !== 'cancelled')
+            const cancelledBookings = data.filter(b => {
+                if (b.status !== 'cancelled') return false
+                return new Date(b.created_at) > thirtyDaysAgo
+            })
+
+            // ── Render booking card ──
+            function renderCard(booking, faded = false) {
+                return `
+                    <div class="booking-card ${faded ? 'booking-card-faded' : ''}">
+                        <h3>${booking.service_type.replace(/-/g, ' ')}</h3>
+                        <p><strong>Date:</strong> ${new Date(booking.preferred_date).toLocaleDateString('en-GB')}</p>
+                        <p><strong>Time:</strong> ${booking.preferred_time || 'Flexible'}</p>
+                        <p><strong>Address:</strong> ${booking.address || 'Not specified'}</p>
+                        <p><strong>Status:</strong> <span class="booking-status ${booking.status}">${booking.status}</span></p>
+                        ${booking.status !== 'cancelled' && booking.status !== 'completed' ? `
+                            <button class="cancel-booking-btn" data-id="${booking.id}">Cancel Booking</button>
+                        ` : ''}
+                    </div>
+                `
+            }
+
+            let html = ''
+
+            // Active bookings first
+            if (activeBookings.length > 0) {
+                html += activeBookings.map(b => renderCard(b)).join('')
+            } else {
+                html += '<p>You have no active bookings. <a href="booking.html">Book a service</a></p>'
+            }
+
+            // Cancelled bookings collapsed at bottom
+            if (cancelledBookings.length > 0) {
+                html += `
+                    <details class="cancelled-bookings-details">
+                        <summary>Show cancelled bookings (${cancelledBookings.length})</summary>
+                        <div class="cancelled-bookings-list">
+                            ${cancelledBookings.map(b => renderCard(b, true)).join('')}
+                        </div>
+                    </details>
+                `
+            }
+
+            bookingsDiv.innerHTML = html
 
             // ── Cancel button click — show modal ──
             document.querySelectorAll('.cancel-booking-btn').forEach(btn => {

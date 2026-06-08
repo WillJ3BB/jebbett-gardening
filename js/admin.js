@@ -8,7 +8,7 @@ async function checkAdmin() {
 checkAdmin()
 
 // ── Load bookings ──
-let currentFilter = 'all'
+let currentFilter = 'pending'
 
 async function loadBookings() {
     let query = supabaseClient
