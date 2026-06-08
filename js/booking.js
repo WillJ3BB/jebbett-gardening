@@ -84,7 +84,7 @@ function renderCalendar() {
         const dateStr = date.toISOString().split('T')[0]
         const capacity = getCapacity(date)
         const booked = bookedCounts[dateStr] ? Object.values(bookedCounts[dateStr]).reduce((a, b) => a + b, 0) : 0
-        const isPast = date < today
+        const isPast = date <= today
         const isTooFar = date > maxDate
         const isFull = booked >= capacity
 
