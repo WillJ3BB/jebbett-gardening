@@ -34,6 +34,7 @@ async function loadPortfolio() {
 
             <!-- Mobile: drag slider -->
             <div class="portfolio-slider mobile-only" id="slider-${index}">
+                <p class="slider-hint">👆 Drag to compare before & after</p>
                 <div class="slider-container">
                     <img src="${entry.after_image_url}" alt="After - ${entry.title}" class="slider-after">
                     <div class="slider-before-wrap">
@@ -94,7 +95,7 @@ function initSlider(sliderEl) {
         setPosition(e.touches[0].clientX)
     })
 
-    // Mouse events (for testing on desktop)
+    // Mouse events
     handle.addEventListener('mousedown', () => isDragging = true)
     window.addEventListener('mouseup', () => isDragging = false)
     window.addEventListener('mousemove', (e) => {
