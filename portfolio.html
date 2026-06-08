@@ -53,6 +53,18 @@
 
     </main>
 
+
+    <!-- Lightbox -->
+    <div id="lightbox" style="display:none;">
+        <div class="lightbox-content">
+            <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+            <button class="lightbox-prev" onclick="lightboxPrev()">&#8592;</button>
+            <img id="lightbox-img" src="" alt="Portfolio image">
+            <button class="lightbox-next" onclick="lightboxNext()">&#8594;</button>
+            <p id="lightbox-counter"></p>
+        </div>
+    </div>
+
     <footer>
         <div class="footer-logo">Jebbett Gardening</div>
         <div class="footer-links">

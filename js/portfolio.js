@@ -12,64 +12,113 @@ async function loadPortfolio() {
         return
     }
 
-    grid.innerHTML = data.map((entry, index) => `
-        <div class="portfolio-card">
-            <div class="portfolio-info">
-                <h3>${entry.title}</h3>
-                ${entry.location ? `<p class="portfolio-location">📍 ${entry.location}</p>` : ''}
-                ${entry.description ? `<p class="portfolio-description">${entry.description}</p>` : ''}
-            </div>
+    grid.innerHTML = data.map((entry, index) => {
+        // ── Get images — support both old and new format ──
+        const images = entry.image_urls && entry.image_urls.length > 0
+            ? entry.image_urls
+            : [entry.before_image_url, entry.after_image_url].filter(Boolean)
 
-            <!-- Desktop: tap to toggle -->
-            <div class="portfolio-toggle desktop-only" id="toggle-${index}">
-                <div class="toggle-image-wrap">
-                    <img src="${entry.before_image_url}" alt="Before - ${entry.title}" class="toggle-img active" data-state="before">
-                    <img src="${entry.after_image_url}" alt="After - ${entry.title}" class="toggle-img" data-state="after">
-                </div>
-                <div class="toggle-controls">
-                    <button class="toggle-btn active" data-target="before" onclick="switchImage(${index}, 'before')">Before</button>
-                    <button class="toggle-btn" data-target="after" onclick="switchImage(${index}, 'after')">After</button>
-                </div>
-            </div>
+        const total = images.length
 
-            <!-- Mobile: drag slider -->
-            <div class="portfolio-slider mobile-only" id="slider-${index}">
-                <p class="slider-hint">👆 Drag to compare before & after</p>
-                <div class="slider-container">
-                    <img src="${entry.after_image_url}" alt="After - ${entry.title}" class="slider-after">
-                    <div class="slider-before-wrap">
-                        <img src="${entry.before_image_url}" alt="Before - ${entry.title}" class="slider-before">
+        // ── Build gallery strip ──
+        const galleryItems = images.map((url, i) => {
+            let label = ''
+            if (i === 0) label = 'Before'
+            else if (i === total - 1 && total > 1) label = 'After'
+
+            return `
+                <div class="gallery-item" onclick="openLightbox(${index}, ${i})">
+                    <img src="${url}" alt="${label || `Photo ${i + 1}`} - ${entry.title}">
+                    ${label ? `<span class="gallery-label">${label}</span>` : ''}
+                </div>
+            `
+        }).join('')
+
+        return `
+            <div class="portfolio-card">
+                <div class="portfolio-info">
+                    <h3>${entry.title}</h3>
+                    ${entry.location ? `<p class="portfolio-location">📍 ${entry.location}</p>` : ''}
+                    ${entry.description ? `<p class="portfolio-description">${entry.description}</p>` : ''}
+                </div>
+
+                <!-- Gallery strip — all screen sizes -->
+                <div class="gallery-strip" id="gallery-${index}">
+                    ${galleryItems}
+                </div>
+
+                <!-- Mobile drag slider — only for 2 image entries -->
+                ${total === 2 ? `
+                <div class="portfolio-slider mobile-only" id="slider-${index}">
+                    <p class="slider-hint">👆 Drag to compare before & after</p>
+                    <div class="slider-container">
+                        <img src="${images[1]}" alt="After - ${entry.title}" class="slider-after">
+                        <div class="slider-before-wrap">
+                            <img src="${images[0]}" alt="Before - ${entry.title}" class="slider-before">
+                        </div>
+                        <div class="slider-handle">
+                            <div class="slider-line"></div>
+                            <div class="slider-circle">⟺</div>
+                        </div>
                     </div>
-                    <div class="slider-handle">
-                        <div class="slider-line"></div>
-                        <div class="slider-circle">⟺</div>
+                    <div class="slider-labels">
+                        <span>Before</span>
+                        <span>After</span>
                     </div>
                 </div>
-                <div class="slider-labels">
-                    <span>Before</span>
-                    <span>After</span>
-                </div>
+                ` : ''}
+
             </div>
+        `
+    }).join('')
 
-        </div>
-    `).join('')
+    // ── Store images for lightbox ──
+    window.portfolioData = data.map(entry => {
+        return entry.image_urls && entry.image_urls.length > 0
+            ? entry.image_urls
+            : [entry.before_image_url, entry.after_image_url].filter(Boolean)
+    })
 
-    // Init sliders on mobile
+    // Init sliders on mobile for 2-image entries
     document.querySelectorAll('.portfolio-slider').forEach(initSlider)
 }
 
-// ── Desktop: tap to toggle ──
-function switchImage(index, state) {
-    const wrap = document.getElementById(`toggle-${index}`)
-    const imgs = wrap.querySelectorAll('.toggle-img')
-    const btns = wrap.querySelectorAll('.toggle-btn')
+// ── Lightbox ──
+let lightboxIndex = 0
+let lightboxImages = []
 
-    imgs.forEach(img => img.classList.remove('active'))
-    btns.forEach(btn => btn.classList.remove('active'))
+function openLightbox(entryIndex, imageIndex) {
+    lightboxImages = window.portfolioData[entryIndex]
+    lightboxIndex = imageIndex
 
-    wrap.querySelector(`[data-state="${state}"]`).classList.add('active')
-    wrap.querySelector(`[data-target="${state}"]`).classList.add('active')
+    const lightbox = document.getElementById('lightbox')
+    lightbox.style.display = 'flex'
+    updateLightbox()
 }
+
+function updateLightbox() {
+    document.getElementById('lightbox-img').src = lightboxImages[lightboxIndex]
+    document.getElementById('lightbox-counter').textContent = `${lightboxIndex + 1} / ${lightboxImages.length}`
+}
+
+function lightboxPrev() {
+    lightboxIndex = (lightboxIndex - 1 + lightboxImages.length) % lightboxImages.length
+    updateLightbox()
+}
+
+function lightboxNext() {
+    lightboxIndex = (lightboxIndex + 1) % lightboxImages.length
+    updateLightbox()
+}
+
+function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none'
+}
+
+// Close on overlay click
+document.getElementById('lightbox').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('lightbox')) closeLightbox()
+})
 
 // ── Mobile: drag slider ──
 function initSlider(sliderEl) {
@@ -87,7 +136,6 @@ function initSlider(sliderEl) {
         handle.style.left = pos + '%'
     }
 
-    // Touch events
     handle.addEventListener('touchstart', () => isDragging = true)
     window.addEventListener('touchend', () => isDragging = false)
     window.addEventListener('touchmove', (e) => {
@@ -95,7 +143,6 @@ function initSlider(sliderEl) {
         setPosition(e.touches[0].clientX)
     })
 
-    // Mouse events
     handle.addEventListener('mousedown', () => isDragging = true)
     window.addEventListener('mouseup', () => isDragging = false)
     window.addEventListener('mousemove', (e) => {
@@ -103,7 +150,6 @@ function initSlider(sliderEl) {
         setPosition(e.clientX)
     })
 
-    // Start at 50%
     beforeWrap.style.width = '50%'
     handle.style.left = '50%'
 }

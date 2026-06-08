@@ -1540,3 +1540,147 @@ footer {
     padding: 2px 4px;
     border-radius: 0 0 4px 4px;
 }
+
+/* ── Gallery Strip ── */
+.gallery-strip {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #2d5a27 #f0f0f0;
+}
+
+.gallery-strip::-webkit-scrollbar {
+    height: 6px;
+}
+
+.gallery-strip::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 3px;
+}
+
+.gallery-strip::-webkit-scrollbar-thumb {
+    background-color: #2d5a27;
+    border-radius: 3px;
+}
+
+.gallery-item {
+    position: relative;
+    flex: 0 0 250px;
+    height: 200px;
+    cursor: pointer;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+}
+
+.gallery-item:hover img {
+    transform: scale(1.03);
+}
+
+.gallery-label {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background-color: #2d5a27;
+    color: #fff;
+    padding: 3px 10px;
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+/* ── Lightbox ── */
+#lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.9);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lightbox-content {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.lightbox-content img {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.lightbox-prev,
+.lightbox-next {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(255,255,255,0.2);
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    padding: 15px 20px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.lightbox-prev {
+    left: 20px;
+}
+
+.lightbox-next {
+    right: 20px;
+}
+
+.lightbox-prev:hover,
+.lightbox-next:hover {
+    background-color: rgba(255,255,255,0.4);
+}
+
+#lightbox-counter {
+    color: #fff;
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .gallery-item {
+        flex: 0 0 180px;
+        height: 150px;
+    }
+
+    .lightbox-prev {
+        left: 5px;
+    }
+
+    .lightbox-next {
+        right: 5px;
+    }
+}
