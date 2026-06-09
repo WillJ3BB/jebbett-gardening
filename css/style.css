@@ -25,9 +25,9 @@ header {
 
 /* ── Logo ── */
 .logo img {
-    height: 80px;
+    height: 50px;
     width: auto;
-    max-width: 200px;
+    max-width: 150px;
     object-fit: contain;
 }
 
@@ -73,7 +73,7 @@ nav ul li a:hover {
 .hero {
     background-color: #2d5a27;
     color: #fff;
-    padding: 180px 40px 100px;
+    padding: 120px 40px 100px;
     text-align: center;
 }
 
@@ -230,7 +230,7 @@ footer {
 .page-hero {
     background-color: #2d5a27;
     color: #fff;
-    padding: 180px 40px 80px;
+    padding: 120px 40px 80px;
     text-align: center;
 }
 
@@ -837,7 +837,7 @@ footer {
 .account-hero {
     background-color: #2d5a27;
     color: #fff;
-    padding: 180px 40px 80px;
+    padding: 120px 40px 80px;
     text-align: center;
 }
 
