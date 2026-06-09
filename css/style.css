@@ -1401,3 +1401,52 @@ footer {
     .lightbox-prev { left: 5px; }
     .lightbox-next { right: 5px; }
 }
+
+
+
+/* ── Admin Notes ── */
+.admin-notes-section {
+    margin: 15px 0;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.admin-notes-section label {
+    display: block;
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.admin-notes-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: Georgia, serif;
+    color: #333;
+    resize: vertical;
+    margin-bottom: 8px;
+}
+
+.admin-notes-input:focus {
+    outline: none;
+    border-color: #2d5a27;
+}
+
+.save-notes-btn {
+    padding: 6px 16px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: Georgia, serif;
+    color: #555;
+}
+
+.save-notes-btn:hover {
+    border-color: #2d5a27;
+    color: #2d5a27;
+}

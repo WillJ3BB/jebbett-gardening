@@ -41,8 +41,13 @@ async function loadBookings() {
                 <p><strong>Date:</strong> ${new Date(booking.preferred_date).toLocaleDateString('en-GB')}</p>
                 <p><strong>Time:</strong> ${booking.preferred_time || 'Flexible'}</p>
                 <p><strong>Address:</strong> ${booking.address || 'Not provided'}</p>
-                ${booking.notes ? `<p><strong>Notes:</strong> ${booking.notes}</p>` : ''}
+                ${booking.notes ? `<p><strong>Customer Notes:</strong> ${booking.notes}</p>` : ''}
                 <p><strong>Submitted:</strong> ${new Date(booking.created_at).toLocaleDateString('en-GB')}</p>
+            </div>
+            <div class="admin-notes-section">
+                <label><strong>Internal Notes</strong></label>
+                <textarea class="admin-notes-input" id="notes-${booking.id}" rows="2" placeholder="Private notes about this job...">${booking.admin_notes || ''}</textarea>
+                <button class="save-notes-btn" onclick="saveNotes('${booking.id}')">Save Note</button>
             </div>
             <div class="admin-booking-actions">
                 <button onclick="updateBookingStatus('${booking.id}', 'confirmed')" class="status-btn confirm-btn" ${booking.status === 'confirmed' ? 'disabled' : ''}>Confirm</button>
@@ -77,6 +82,28 @@ async function updateBookingStatus(id, status) {
     }
 
     loadBookings()
+}
+
+// ── Save internal notes ──
+async function saveNotes(id) {
+    const notes = document.getElementById(`notes-${id}`).value
+
+    const { error } = await supabaseClient
+        .from('bookings')
+        .update({ admin_notes: notes })
+        .eq('id', id)
+
+    if (error) {
+        alert('Error saving notes: ' + error.message)
+        return
+    }
+
+    const btn = document.querySelector(`#notes-${id} + .save-notes-btn`) 
+    const saveBtn = document.querySelector(`[onclick="saveNotes('${id}')"]`)
+    if (saveBtn) {
+        saveBtn.textContent = 'Saved!'
+        setTimeout(() => saveBtn.textContent = 'Save Note', 2000)
+    }
 }
 
 // ── Load existing portfolio entries ──
