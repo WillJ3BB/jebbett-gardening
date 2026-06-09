@@ -1515,3 +1515,149 @@ footer {
         font-size: 13px;
     }
 }
+
+
+
+
+
+/* ── Admin Weekly Calendar ── */
+.admin-calendar-section {
+    padding: 60px 40px 40px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.admin-calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.admin-calendar-header h2 {
+    font-size: 28px;
+    color: #222;
+}
+
+.calendar-week-nav {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.calendar-week-nav button {
+    background: none;
+    border: 1px solid #ddd;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-family: Georgia, serif;
+}
+
+.calendar-week-nav button:hover {
+    border-color: #2d5a27;
+    color: #2d5a27;
+}
+
+.calendar-week-nav span {
+    font-size: 15px;
+    color: #555;
+}
+
+.week-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.week-day-column {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.week-day-header {
+    background-color: #2d5a27;
+    color: #fff;
+    padding: 8px;
+    text-align: center;
+}
+
+.week-day-name {
+    display: block;
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+.week-day-date {
+    display: block;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.week-day-bookings {
+    padding: 8px;
+    min-height: 80px;
+}
+
+.no-bookings-day {
+    text-align: center;
+    color: #ccc;
+    font-size: 18px;
+    margin-top: 20px;
+}
+
+.week-booking-item {
+    border-radius: 4px;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+}
+
+.week-booking-item.pending {
+    background-color: #fff3cd;
+    border-left: 3px solid #f0ad4e;
+}
+
+.week-booking-item.confirmed {
+    background-color: #d4edda;
+    border-left: 3px solid #2d5a27;
+}
+
+.week-booking-item.completed {
+    background-color: #d1ecf1;
+    border-left: 3px solid #5bc0de;
+}
+
+.week-booking-name {
+    display: block;
+    font-weight: bold;
+    color: #222;
+    margin-bottom: 2px;
+}
+
+.week-booking-service {
+    display: block;
+    color: #555;
+    text-transform: capitalize;
+    margin-bottom: 2px;
+}
+
+.week-booking-time {
+    display: block;
+    color: #888;
+    font-size: 11px;
+}
+
+@media (max-width: 768px) {
+    .admin-calendar-section {
+        padding: 40px 20px;
+    }
+
+    .week-calendar-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
