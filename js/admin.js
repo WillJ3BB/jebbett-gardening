@@ -7,6 +7,78 @@ async function checkAdmin() {
 }
 checkAdmin()
 
+// ── Weekly Calendar ──
+let calendarWeekStart = getMonday(new Date())
+
+function getMonday(date) {
+    const d = new Date(date)
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+    d.setDate(diff)
+    d.setHours(0, 0, 0, 0)
+    return d
+}
+
+async function loadWeekCalendar() {
+    const weekStart = new Date(calendarWeekStart)
+    const weekEnd = new Date(calendarWeekStart)
+    weekEnd.setDate(weekEnd.getDate() + 6)
+
+    const startStr = weekStart.toISOString().split('T')[0]
+    const endStr = weekEnd.toISOString().split('T')[0]
+
+    const { data, error } = await supabaseClient
+        .from('bookings')
+        .select('*')
+        .gte('preferred_date', startStr)
+        .lte('preferred_date', endStr)
+        .neq('status', 'cancelled')
+        .order('preferred_date', { ascending: true })
+
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    const label = document.getElementById('week-label')
+    const grid = document.getElementById('week-calendar')
+
+    label.textContent = `${weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} — ${weekEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+
+    grid.innerHTML = days.map((day, i) => {
+        const date = new Date(weekStart)
+        date.setDate(date.getDate() + i)
+        const dateStr = date.toISOString().split('T')[0]
+        const dayBookings = data ? data.filter(b => b.preferred_date === dateStr) : []
+
+        return `
+            <div class="week-day-column">
+                <div class="week-day-header">
+                    <span class="week-day-name">${day}</span>
+                    <span class="week-day-date">${date.getDate()}</span>
+                </div>
+                <div class="week-day-bookings">
+                    ${dayBookings.length === 0 ? '<p class="no-bookings-day">—</p>' : dayBookings.map(b => `
+                        <div class="week-booking-item ${b.status}">
+                            <span class="week-booking-name">${b.full_name}</span>
+                            <span class="week-booking-service">${b.service_type.replace(/-/g, ' ')}</span>
+                            <span class="week-booking-time">${b.preferred_time || 'Flexible'}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `
+    }).join('')
+}
+
+document.getElementById('prev-week').addEventListener('click', () => {
+    calendarWeekStart.setDate(calendarWeekStart.getDate() - 7)
+    loadWeekCalendar()
+})
+
+document.getElementById('next-week').addEventListener('click', () => {
+    calendarWeekStart.setDate(calendarWeekStart.getDate() + 7)
+    loadWeekCalendar()
+})
+
+loadWeekCalendar()
+
 // ── Load bookings ──
 let currentFilter = 'pending'
 
