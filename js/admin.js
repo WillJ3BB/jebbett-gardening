@@ -98,13 +98,51 @@ async function saveNotes(id) {
         return
     }
 
-    const btn = document.querySelector(`#notes-${id} + .save-notes-btn`) 
     const saveBtn = document.querySelector(`[onclick="saveNotes('${id}')"]`)
     if (saveBtn) {
         saveBtn.textContent = 'Saved!'
         setTimeout(() => saveBtn.textContent = 'Save Note', 2000)
     }
 }
+
+// ── Load customer list ──
+async function loadCustomers() {
+    const { data, error } = await supabaseClient
+        .from('customer_summary')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+    const list = document.getElementById('customers-list')
+
+    if (error || !data || data.length === 0) {
+        list.innerHTML = '<p>No customers yet.</p>'
+        return
+    }
+
+    list.innerHTML = `
+        <table class="customers-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Bookings</th>
+                    <th>Joined</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.map(customer => `
+                    <tr>
+                        <td>${customer.full_name || 'Not provided'}</td>
+                        <td><a href="mailto:${customer.email}">${customer.email}</a></td>
+                        <td>${customer.booking_count}</td>
+                        <td>${new Date(customer.created_at).toLocaleDateString('en-GB')}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `
+}
+loadCustomers()
 
 // ── Load existing portfolio entries ──
 async function loadEntries() {
