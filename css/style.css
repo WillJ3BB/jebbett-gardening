@@ -1661,3 +1661,49 @@ footer {
         grid-template-columns: repeat(3, 1fr);
     }
 }
+
+/* ── Entry Edit ── */
+.entry-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.edit-entry-btn {
+    background: none;
+    border: 1px solid #2d5a27;
+    color: #2d5a27;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.edit-entry-btn:hover {
+    background-color: #2d5a27;
+    color: #fff;
+}
+
+.save-entry-btn {
+    background-color: #2d5a27;
+    border: none;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.cancel-edit-btn {
+    background: none;
+    border: 1px solid #ddd;
+    color: #555;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.entry-edit {
+    margin-top: 10px;
+}

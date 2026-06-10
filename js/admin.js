@@ -233,17 +233,73 @@ async function loadEntries() {
     list.innerHTML = data.map(entry => {
         const images = entry.image_urls || [entry.before_image_url, entry.after_image_url].filter(Boolean)
         return `
-            <div class="entry-card">
-                <h3>${entry.title}</h3>
-                <p>${entry.description || ''}</p>
-                <p><strong>Location:</strong> ${entry.location || 'Not specified'}</p>
-                <p><strong>Photos:</strong> ${images.length}</p>
-                <button onclick="deleteEntry('${entry.id}', ${JSON.stringify(images).replace(/"/g, '&quot;')})">Delete</button>
+            <div class="entry-card" id="entry-${entry.id}">
+                <div class="entry-view">
+                    <h3>${entry.title}</h3>
+                    <p>${entry.description || ''}</p>
+                    <p><strong>Location:</strong> ${entry.location || 'Not specified'}</p>
+                    <p><strong>Photos:</strong> ${images.length}</p>
+                    <div class="entry-actions">
+                        <button class="edit-entry-btn" onclick="toggleEdit('${entry.id}')">Edit</button>
+                        <button onclick="deleteEntry('${entry.id}', ${JSON.stringify(images).replace(/"/g, '&quot;')})">Delete</button>
+                    </div>
+                </div>
+                <div class="entry-edit" id="edit-${entry.id}" style="display:none;">
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="edit-title-${entry.id}" value="${entry.title}">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="edit-desc-${entry.id}" rows="3">${entry.description || ''}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input type="text" id="edit-loc-${entry.id}" value="${entry.location || ''}">
+                    </div>
+                    <div class="entry-actions">
+                        <button class="save-entry-btn" onclick="saveEntry('${entry.id}')">Save</button>
+                        <button class="cancel-edit-btn" onclick="toggleEdit('${entry.id}')">Cancel</button>
+                    </div>
+                </div>
             </div>
         `
     }).join('')
 }
 loadEntries()
+
+// ── Toggle edit mode ──
+function toggleEdit(id) {
+    const view = document.querySelector(`#entry-${id} .entry-view`)
+    const edit = document.getElementById(`edit-${id}`)
+    const isEditing = edit.style.display === 'block'
+    view.style.display = isEditing ? 'block' : 'none'
+    edit.style.display = isEditing ? 'none' : 'block'
+}
+
+// ── Save portfolio entry edits ──
+async function saveEntry(id) {
+    const title = document.getElementById(`edit-title-${id}`).value
+    const description = document.getElementById(`edit-desc-${id}`).value
+    const location = document.getElementById(`edit-loc-${id}`).value
+
+    if (!title) {
+        alert('Title is required')
+        return
+    }
+
+    const { error } = await supabaseClient
+        .from('portfolio')
+        .update({ title, description, location })
+        .eq('id', id)
+
+    if (error) {
+        alert('Error saving: ' + error.message)
+        return
+    }
+
+    loadEntries()
+}
 
 // ── Upload portfolio entry ──
 document.getElementById('upload-btn').addEventListener('click', async () => {

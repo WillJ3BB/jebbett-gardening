@@ -1,156 +1,45 @@
-<!DOCTYPE html>
-<html lang="en">
+/* ── Entry Edit ── */
+.entry-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin | Jebbett Gardening</title>
-    <link rel="stylesheet" href="css/style.css">
-</head>
+.edit-entry-btn {
+    background: none;
+    border: 1px solid #2d5a27;
+    color: #2d5a27;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
 
-<body>
+.edit-entry-btn:hover {
+    background-color: #2d5a27;
+    color: #fff;
+}
 
-    <header>
-        <div class="logo">
-            <a href="index.html">
-                <img src="images/jebbett-logo.jpeg">
-            </a>
-        </div>
-        <button class="hamburger" id="hamburger">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-        <nav id="main-nav">
-            <ul>
-                <li><a href="index.html">Home</a></li>
-                <li><a href="about.html">About</a></li>
-                <li><a href="services.html">Services</a></li>
-                <li><a href="portfolio.html">Portfolio</a></li>
-                <li><a href="booking.html">Book a Service</a></li>
-                <li><a href="contact.html">Contact</a></li>
-                <li><a href="login.html">Login</a></li>
-                <li><a href="account.html">My Account</a></li>
-            </ul>
-        </nav>
-    </header>
+.save-entry-btn {
+    background-color: #2d5a27;
+    border: none;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
 
-    <main>
+.cancel-edit-btn {
+    background: none;
+    border: 1px solid #ddd;
+    color: #555;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
 
-        <section class="page-hero">
-            <h1>Admin Panel</h1>
-            <p>Manage bookings and portfolio images.</p>
-        </section>
-
-
-        <!-- Weekly Calendar -->
-        <section class="admin-calendar-section">
-            <div class="admin-calendar-header">
-                <h2>Weekly Overview</h2>
-                <div class="calendar-week-nav">
-                    <button id="prev-week">&#8592;</button>
-                    <span id="week-label"></span>
-                    <button id="next-week">&#8594;</button>
-                </div>
-            </div>
-            <div id="week-calendar" class="week-calendar-grid"></div>
-        </section>
-
-        <!-- Bookings Management -->
-        <section class="admin-bookings-section">
-            <div class="admin-bookings-header">
-                <h2>Incoming Bookings</h2>
-                <div class="booking-filters">
-                    <button class="filter-btn" data-filter="all">All</button>
-                    <button class="filter-btn active" data-filter="pending">Pending</button>
-                    <button class="filter-btn" data-filter="confirmed">Confirmed</button>
-                    <button class="filter-btn" data-filter="completed">Completed</button>
-                    <button class="filter-btn" data-filter="cancelled">Cancelled</button>
-                </div>
-            </div>
-            <div id="bookings-list">
-                <p>Loading bookings...</p>
-            </div>
-        </section>
-
-        <!-- Customer List -->
-        <section class="admin-customers-section">
-            <div class="admin-customers-header">
-                <h2>Customer List</h2>
-            </div>
-            <div id="customers-list">
-                <p>Loading customers...</p>
-            </div>
-        </section>
-
-        <!-- Portfolio Management -->
-        <div class="admin-divider">
-            <h2>Portfolio Management</h2>
-        </div>
-
-        <section class="admin-section">
-
-            <div class="admin-form">
-                <h2>Add New Entry</h2>
-
-                <div class="form-group">
-                    <label for="title">Job Title</label>
-                    <input type="text" id="title" placeholder="e.g. Overgrown back garden clearance">
-                </div>
-
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea id="description" rows="3" placeholder="Brief description of the job..."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="location">Location (optional)</label>
-                    <input type="text" id="location" placeholder="e.g. Eastbourne, East Sussex">
-                </div>
-
-                <div class="form-group">
-                    <label for="portfolio-images">Photos (2–5) — first is Before, last is After</label>
-                    <input type="file" id="portfolio-images" accept="image/*" multiple>
-                </div>
-
-                <div id="image-preview" class="image-preview-grid"></div>
-
-                <button class="btn" id="upload-btn">Upload Portfolio Entry</button>
-                <p id="upload-status"></p>
-            </div>
-
-            <div class="admin-entries">
-                <h2>Current Entries</h2>
-                <div id="entries-list">
-                    <p>Loading entries...</p>
-                </div>
-            </div>
-
-        </section>
-
-    </main>
-
-    <footer>
-        <div class="footer-logo">Jebbett Gardening</div>
-        <div class="footer-links">
-            <a href="index.html">Home</a>
-            <a href="about.html">About</a>
-            <a href="services.html">Services</a>
-            <a href="portfolio.html">Portfolio</a>
-            <a href="booking.html">Book a Service</a>
-            <a href="contact.html">Contact</a>
-        </div>
-        <div class="footer-copy">
-            <p>&copy; 2026 Jebbett Gardening. All rights reserved.</p>
-        </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase.js"></script>
-    <script src="js/admin.js"></script>
-    <script src="js/nav.js"></script>
-    <script src="js/hamburger.js"></script>
-
-</body>
-
-</html>
+.entry-edit {
+    margin-top: 10px;
+}
