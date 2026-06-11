@@ -216,6 +216,9 @@ async function loadCustomers() {
 }
 loadCustomers()
 
+// ── Track removed photos per entry ──
+const removedPhotos = {}
+
 // ── Load existing portfolio entries ──
 async function loadEntries() {
     const { data, error } = await supabaseClient
@@ -231,7 +234,10 @@ async function loadEntries() {
     }
 
     list.innerHTML = data.map(entry => {
-        const images = entry.image_urls || [entry.before_image_url, entry.after_image_url].filter(Boolean)
+        const images = entry.image_urls && entry.image_urls.length > 0
+            ? entry.image_urls
+            : [entry.before_image_url, entry.after_image_url].filter(Boolean)
+
         return `
             <div class="entry-card" id="entry-${entry.id}">
                 <div class="entry-view">
@@ -240,7 +246,7 @@ async function loadEntries() {
                     <p><strong>Location:</strong> ${entry.location || 'Not specified'}</p>
                     <p><strong>Photos:</strong> ${images.length}</p>
                     <div class="entry-actions">
-                        <button class="edit-entry-btn" onclick="toggleEdit('${entry.id}')">Edit</button>
+                        <button class="edit-entry-btn" onclick="toggleEdit('${entry.id}', ${JSON.stringify(images).replace(/"/g, '&quot;')})">Edit</button>
                         <button onclick="deleteEntry('${entry.id}', ${JSON.stringify(images).replace(/"/g, '&quot;')})">Delete</button>
                     </div>
                 </div>
@@ -257,10 +263,19 @@ async function loadEntries() {
                         <label>Location</label>
                         <input type="text" id="edit-loc-${entry.id}" value="${entry.location || ''}">
                     </div>
+                    <div class="form-group">
+                        <label>Current Photos <small>(click ✕ to remove)</small></label>
+                        <div class="edit-photos-grid" id="edit-photos-${entry.id}"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Add New Photos</label>
+                        <input type="file" id="edit-new-images-${entry.id}" accept="image/*" multiple>
+                    </div>
                     <div class="entry-actions">
                         <button class="save-entry-btn" onclick="saveEntry('${entry.id}')">Save</button>
-                        <button class="cancel-edit-btn" onclick="toggleEdit('${entry.id}')">Cancel</button>
+                        <button class="cancel-edit-btn" onclick="toggleEdit('${entry.id}', [])">Cancel</button>
                     </div>
+                    <p id="edit-status-${entry.id}" style="font-size:13px;margin-top:8px;"></p>
                 </div>
             </div>
         `
@@ -269,12 +284,45 @@ async function loadEntries() {
 loadEntries()
 
 // ── Toggle edit mode ──
-function toggleEdit(id) {
+function toggleEdit(id, images) {
     const view = document.querySelector(`#entry-${id} .entry-view`)
     const edit = document.getElementById(`edit-${id}`)
     const isEditing = edit.style.display === 'block'
+
     view.style.display = isEditing ? 'block' : 'none'
     edit.style.display = isEditing ? 'none' : 'block'
+
+    if (!isEditing) {
+        removedPhotos[id] = []
+        const grid = document.getElementById(`edit-photos-${id}`)
+        grid.innerHTML = images.map((url, i) => `
+            <div class="edit-photo-item" id="edit-photo-${id}-${i}">
+                <img src="${url}" alt="Photo ${i + 1}">
+                <button class="remove-photo-btn" onclick="removePhoto('${id}', ${i}, '${url}')">✕</button>
+            </div>
+        `).join('')
+    }
+}
+
+// ── Remove a photo from edit view ──
+function removePhoto(entryId, index, url) {
+    if (!removedPhotos[entryId]) removedPhotos[entryId] = []
+    removedPhotos[entryId].push(url)
+    const item = document.getElementById(`edit-photo-${entryId}-${index}`)
+    if (item) item.style.opacity = '0.3'
+    const btn = item.querySelector('.remove-photo-btn')
+    if (btn) btn.textContent = '↩'
+    btn.onclick = () => restorePhoto(entryId, index, url)
+}
+
+// ── Restore a removed photo ──
+function restorePhoto(entryId, index, url) {
+    removedPhotos[entryId] = removedPhotos[entryId].filter(u => u !== url)
+    const item = document.getElementById(`edit-photo-${entryId}-${index}`)
+    if (item) item.style.opacity = '1'
+    const btn = item.querySelector('.remove-photo-btn')
+    if (btn) btn.textContent = '✕'
+    btn.onclick = () => removePhoto(entryId, index, url)
 }
 
 // ── Save portfolio entry edits ──
@@ -282,19 +330,81 @@ async function saveEntry(id) {
     const title = document.getElementById(`edit-title-${id}`).value
     const description = document.getElementById(`edit-desc-${id}`).value
     const location = document.getElementById(`edit-loc-${id}`).value
+    const newFiles = document.getElementById(`edit-new-images-${id}`).files
+    const statusEl = document.getElementById(`edit-status-${id}`)
 
     if (!title) {
-        alert('Title is required')
+        statusEl.textContent = 'Title is required'
+        statusEl.style.color = 'red'
+        return
+    }
+
+    statusEl.textContent = 'Saving...'
+    statusEl.style.color = '#2d5a27'
+
+    // Get current entry images
+    const { data: entry } = await supabaseClient
+        .from('portfolio')
+        .select('image_urls, before_image_url, after_image_url')
+        .eq('id', id)
+        .single()
+
+    let currentImages = entry.image_urls && entry.image_urls.length > 0
+        ? entry.image_urls
+        : [entry.before_image_url, entry.after_image_url].filter(Boolean)
+
+    // Remove marked photos from storage and array
+    const toRemove = removedPhotos[id] || []
+    for (const url of toRemove) {
+        const path = url.split('/Portfolio/')[1]
+        if (path) await supabaseClient.storage.from('Portfolio').remove([path])
+    }
+    currentImages = currentImages.filter(url => !toRemove.includes(url))
+
+    // Upload new photos
+    for (let i = 0; i < newFiles.length; i++) {
+        const file = newFiles[i]
+        const path = `progress/${Date.now()}-${i}-${file.name}`
+
+        const { error: uploadError } = await supabaseClient.storage
+            .from('Portfolio')
+            .upload(path, file)
+
+        if (uploadError) {
+            statusEl.textContent = `Error uploading photo: ${uploadError.message}`
+            statusEl.style.color = 'red'
+            return
+        }
+
+        const { data: urlData } = supabaseClient.storage
+            .from('Portfolio')
+            .getPublicUrl(path)
+
+        currentImages.push(urlData.publicUrl)
+    }
+
+    if (currentImages.length < 2) {
+        statusEl.textContent = 'At least 2 photos required'
+        statusEl.style.color = 'red'
         return
     }
 
     const { error } = await supabaseClient
         .from('portfolio')
-        .update({ title, description, location })
+        .update({
+            title,
+            description,
+            location,
+            image_urls: currentImages,
+            image_count: currentImages.length,
+            before_image_url: currentImages[0],
+            after_image_url: currentImages[currentImages.length - 1]
+        })
         .eq('id', id)
 
     if (error) {
-        alert('Error saving: ' + error.message)
+        statusEl.textContent = 'Error saving: ' + error.message
+        statusEl.style.color = 'red'
         return
     }
 
