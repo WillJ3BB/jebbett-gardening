@@ -1806,3 +1806,57 @@ footer {
         padding: 40px 20px;
     }
 }
+
+
+
+/* ── Cookie Notice ── */
+#cookie-notice {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #222;
+    color: #fff;
+    padding: 15px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    z-index: 999;
+    font-size: 14px;
+}
+
+#cookie-notice p {
+    margin: 0;
+    color: #ccc;
+    line-height: 1.5;
+}
+
+#cookie-notice a {
+    color: #fff;
+    text-decoration: underline;
+}
+
+#cookie-notice button {
+    background-color: #2d5a27;
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: Georgia, serif;
+    white-space: nowrap;
+}
+
+#cookie-notice button:hover {
+    background-color: #3d7a35;
+}
+
+@media (max-width: 768px) {
+    #cookie-notice {
+        flex-direction: column;
+        padding: 20px;
+        text-align: center;
+    }
+}
