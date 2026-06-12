@@ -1,3 +1,48 @@
+// ── Check if user is logged in ──
+async function checkAuth() {
+    const { data: { session } } = await supabaseClient.auth.getSession()
+    if (!session) {
+        window.location.href = 'login.html?redirect=booking.html'
+        return false
+    }
+    return true
+}
+
+// ── Form validation ──
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return re.test(email)
+}
+
+function validatePhone(phone) {
+    const re = /^[\d\s\-\+\(\)]{10,}$/
+    return re.test(phone.trim())
+}
+
+function validateForm(fullName, email, phone, serviceType, address) {
+    if (!fullName || fullName.trim() === '') {
+        alert('Please enter your full name')
+        return false
+    }
+    if (!email || !validateEmail(email)) {
+        alert('Please enter a valid email address')
+        return false
+    }
+    if (!phone || !validatePhone(phone)) {
+        alert('Please enter a valid phone number')
+        return false
+    }
+    if (!serviceType || serviceType === '') {
+        alert('Please select a service')
+        return false
+    }
+    if (!address || address.trim() === '') {
+        alert('Please enter your address')
+        return false
+    }
+    return true
+}
+
 // ── Booking Calendar ──
 
 const today = new Date()
@@ -189,8 +234,7 @@ async function handleBooking() {
     const address = document.getElementById('address').value
     const notes = document.getElementById('notes').value
 
-    if (!fullName || !email || !serviceType || !address) {
-        alert('Please fill in all required fields')
+    if (!validateForm(fullName, email, phone, serviceType, address)) {
         return
     }
 
@@ -245,4 +289,8 @@ document.addEventListener('keydown', (e) => {
 })
 
 // ── Init ──
-loadBookedCounts().then(renderCalendar)
+checkAuth().then(isAuth => {
+    if (isAuth) {
+        loadBookedCounts().then(renderCalendar)
+    }
+})

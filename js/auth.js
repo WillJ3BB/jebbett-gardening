@@ -1,3 +1,9 @@
+// ── Get redirect URL from query params ──
+function getRedirectUrl() {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('redirect') || 'account.html'
+}
+
 // ── Sign Up ──
 const signupBtn = document.getElementById('signup-btn')
 
@@ -54,7 +60,8 @@ async function handleLogin() {
     if (error) {
         alert('Error: ' + error.message)
     } else {
-        window.location.href = 'account.html'
+        const redirectUrl = getRedirectUrl()
+        window.location.href = redirectUrl
     }
 }
 
