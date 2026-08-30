@@ -216,6 +216,40 @@ async function loadCustomers() {
 }
 loadCustomers()
 
+// ── Load gallery options ──
+async function loadGalleries() {
+    const { data, error } = await supabaseClient
+        .from('portfolio')
+        .select('gallery')
+        .not('gallery', 'is', null)
+
+    const galleries = [...new Set(data?.map(d => d.gallery).filter(Boolean) || [])]
+    const select = document.getElementById('gallery')
+    
+    select.innerHTML = '<option value="">Select or create gallery...</option>'
+    galleries.forEach(gal => {
+        const opt = document.createElement('option')
+        opt.value = gal
+        opt.textContent = gal
+        select.appendChild(opt)
+    })
+}
+
+// ── Toggle new gallery input ──
+if (document.getElementById('toggle-new-gallery-btn')) {
+    document.getElementById('toggle-new-gallery-btn').addEventListener('click', () => {
+        const input = document.getElementById('new-gallery')
+        const select = document.getElementById('gallery')
+        const isHidden = input.style.display === 'none'
+        
+        input.style.display = isHidden ? 'block' : 'none'
+        select.style.display = isHidden ? 'none' : 'block'
+        input.value = ''
+    })
+}
+
+loadGalleries()
+
 // ── Track removed photos per entry ──
 const removedPhotos = {}
 
@@ -243,6 +277,7 @@ async function loadEntries() {
                 <div class="entry-view">
                     <h3>${entry.title}</h3>
                     <p>${entry.description || ''}</p>
+                    <p><strong>Gallery:</strong> ${entry.gallery || 'Not assigned'}</p>
                     <p><strong>Location:</strong> ${entry.location || 'Not specified'}</p>
                     <p><strong>Photos:</strong> ${images.length}</p>
                     <div class="entry-actions">
@@ -254,6 +289,16 @@ async function loadEntries() {
                     <div class="form-group">
                         <label>Title</label>
                         <input type="text" id="edit-title-${entry.id}" value="${entry.title}">
+                    </div>
+                    <div class="form-group">
+                        <label>Gallery</label>
+                        <div class="gallery-select-group">
+                            <select id="edit-gallery-${entry.id}">
+                                <option value="">Select gallery...</option>
+                            </select>
+                            <input type="text" id="edit-new-gallery-${entry.id}" placeholder="New gallery name..." style="display:none;">
+                            <button type="button" class="toggle-new-gallery-btn" onclick="toggleEditNewGallery('${entry.id}')">+ New</button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Description</label>
@@ -280,8 +325,41 @@ async function loadEntries() {
             </div>
         `
     }).join('')
+
+    // Populate gallery dropdowns in edit views
+    const { data: allGalleries } = await supabaseClient
+        .from('portfolio')
+        .select('gallery')
+        .not('gallery', 'is', null)
+
+    const galleries = [...new Set(allGalleries?.map(d => d.gallery).filter(Boolean) || [])]
+
+    data.forEach(entry => {
+        const select = document.getElementById(`edit-gallery-${entry.id}`)
+        if (select) {
+            select.innerHTML = '<option value="">Select gallery...</option>'
+            galleries.forEach(gal => {
+                const opt = document.createElement('option')
+                opt.value = gal
+                opt.textContent = gal
+                if (gal === entry.gallery) opt.selected = true
+                select.appendChild(opt)
+            })
+        }
+    })
 }
 loadEntries()
+
+// ── Toggle new gallery in edit mode ──
+function toggleEditNewGallery(entryId) {
+    const input = document.getElementById(`edit-new-gallery-${entryId}`)
+    const select = document.getElementById(`edit-gallery-${entryId}`)
+    const isHidden = input.style.display === 'none'
+    
+    input.style.display = isHidden ? 'block' : 'none'
+    select.style.display = isHidden ? 'none' : 'block'
+    input.value = ''
+}
 
 // ── Toggle edit mode ──
 function toggleEdit(id, images) {
@@ -330,11 +408,20 @@ async function saveEntry(id) {
     const title = document.getElementById(`edit-title-${id}`).value
     const description = document.getElementById(`edit-desc-${id}`).value
     const location = document.getElementById(`edit-loc-${id}`).value
+    const gallerySelect = document.getElementById(`edit-gallery-${id}`)
+    const galleryInput = document.getElementById(`edit-new-gallery-${id}`)
+    const gallery = galleryInput.style.display === 'block' ? galleryInput.value : gallerySelect.value
     const newFiles = document.getElementById(`edit-new-images-${id}`).files
     const statusEl = document.getElementById(`edit-status-${id}`)
 
     if (!title) {
         statusEl.textContent = 'Title is required'
+        statusEl.style.color = 'red'
+        return
+    }
+
+    if (!gallery) {
+        statusEl.textContent = 'Gallery is required'
         statusEl.style.color = 'red'
         return
     }
@@ -395,6 +482,7 @@ async function saveEntry(id) {
             title,
             description,
             location,
+            gallery,
             image_urls: currentImages,
             image_count: currentImages.length,
             before_image_url: currentImages[0],
@@ -416,11 +504,20 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     const title = document.getElementById('title').value
     const description = document.getElementById('description').value
     const location = document.getElementById('location').value
+    const gallerySelect = document.getElementById('gallery')
+    const galleryInput = document.getElementById('new-gallery')
+    const gallery = galleryInput.style.display === 'block' ? galleryInput.value : gallerySelect.value
     const files = document.getElementById('portfolio-images').files
     const status = document.getElementById('upload-status')
 
     if (!title || files.length < 2) {
         status.textContent = 'Please add a title and at least 2 photos'
+        status.style.color = 'red'
+        return
+    }
+
+    if (!gallery) {
+        status.textContent = 'Please select or create a gallery'
         status.style.color = 'red'
         return
     }
@@ -464,6 +561,7 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
             title,
             description,
             location,
+            gallery,
             image_urls: imageUrls,
             image_count: imageUrls.length,
             before_image_url: imageUrls[0],
@@ -480,9 +578,14 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     document.getElementById('title').value = ''
     document.getElementById('description').value = ''
     document.getElementById('location').value = ''
+    document.getElementById('gallery').value = ''
+    document.getElementById('new-gallery').value = ''
+    document.getElementById('new-gallery').style.display = 'none'
+    document.getElementById('gallery').style.display = 'block'
     document.getElementById('portfolio-images').value = ''
     document.getElementById('image-preview').innerHTML = ''
     loadEntries()
+    loadGalleries()
 })
 
 // ── Image preview ──
