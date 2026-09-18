@@ -217,17 +217,28 @@ async function loadCustomers() {
 loadCustomers()
 
 // ── Load gallery options ──
+// ── Load gallery options with standard 5 categories ──
+const DEFAULT_CATEGORIES = [
+    'Lawn Cuts',
+    'Hedge Trimming',
+    'Garden Clearance',
+    'Planting Beds',
+    'General Maintenance'
+];
+
 async function loadGalleries() {
-    const { data, error } = await supabaseClient
+    const { data } = await supabaseClient
         .from('portfolio')
         .select('gallery')
         .not('gallery', 'is', null)
 
-    const galleries = [...new Set(data?.map(d => d.gallery).filter(Boolean) || [])]
+    const dbGalleries = data?.map(d => d.gallery).filter(Boolean) || []
+    // Combine standard 5 with any existing galleries
+    const allGalleries = [...new Set([...DEFAULT_CATEGORIES, ...dbGalleries])]
+
     const select = document.getElementById('gallery')
-    
-    select.innerHTML = '<option value="">Select or create gallery...</option>'
-    galleries.forEach(gal => {
+    select.innerHTML = '<option value="">Select category frame...</option>'
+    allGalleries.forEach(gal => {
         const opt = document.createElement('option')
         opt.value = gal
         opt.textContent = gal
