@@ -1,35 +1,123 @@
-// ── Get redirect URL from query params ──
-function getRedirectUrl() {
-    const params = new URLSearchParams(window.location.search)
-    return params.get('redirect') || 'account.html'
+// ── XSS Sanitization Helper ──
+function escapeHtml(text) {
+    if (!text) return ''
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
 }
 
-// ── Sign Up ──
+// ── Open-Redirect Protected URL resolver ──
+function getSafeRedirectUrl() {
+    const params = new URLSearchParams(window.location.search)
+    const rawRedirect = params.get('redirect')
+
+    if (!rawRedirect) return 'account.html'
+
+    const decoded = decodeURIComponent(rawRedirect).trim()
+
+    // Must start with a relative local path (.html) and not protocol-relative (//)
+    if (decoded.startsWith('/') && !decoded.startsWith('//')) {
+        return decoded
+    }
+
+    if (/^[a-zA-Z0-9_-]+\.html(\?[a-zA-Z0-9_=&-]*)?$/.test(decoded)) {
+        return decoded
+    }
+
+    // Default safe fallback if invalid
+    return 'account.html'
+}
+
+// ── Pass redirect parameter between Login and Signup links ──
+function preserveRedirectLinks() {
+    const params = new URLSearchParams(window.location.search)
+    const redirectParam = params.get('redirect')
+    if (!redirectParam) return
+
+    const toSignup = document.getElementById('to-signup-link')
+    if (toSignup) {
+        toSignup.href = `signup.html?redirect=${encodeURIComponent(redirectParam)}`
+    }
+
+    const toLogin = document.getElementById('to-login-link')
+    if (toLogin) {
+        toLogin.href = `login.html?redirect=${encodeURIComponent(redirectParam)}`
+    }
+}
+preserveRedirectLinks()
+
+// ── In-page UI Alerts ──
+function showAuthAlert(message, isError = true) {
+    const box = document.getElementById('auth-alert')
+    if (!box) {
+        alert(message)
+        return
+    }
+    box.textContent = message
+    box.style.display = 'block'
+    box.style.background = isError ? '#ffebee' : '#e8f5e9'
+    box.style.color = isError ? '#c62828' : '#2e7d32'
+    box.style.border = `1px solid ${isError ? '#ef9a9a' : '#a5d6a7'}`
+}
+
+// ── Sign Up Handler ──
 const signupBtn = document.getElementById('signup-btn')
 
 async function handleSignup() {
-    const name = document.getElementById('full-name').value
-    const email = document.getElementById('email').value
-    const password = document.getElementById('password').value
+    const nameEl = document.getElementById('full-name')
+    const emailEl = document.getElementById('email')
+    const passwordEl = document.getElementById('password')
+
+    if (!nameEl || !emailEl || !passwordEl) return
+
+    const name = nameEl.value.trim()
+    const email = emailEl.value.trim().toLowerCase()
+    const password = passwordEl.value
 
     if (!name || !email || !password) {
-        alert('Please fill in all fields')
+        showAuthAlert('Please fill in all fields.')
         return
     }
 
-    const { error } = await supabaseClient.auth.signUp({
-        email,
-        password,
-        options: {
-            data: { full_name: name }
-        }
-    })
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+        showAuthAlert('Please enter a valid email address.')
+        return
+    }
 
-    if (error) {
-        alert('Error: ' + error.message)
-    } else {
-        alert('Account created! Please check your email to confirm your account.')
-        window.location.href = 'login.html'
+    if (password.length < 8) {
+        showAuthAlert('Password must be at least 8 characters long.')
+        return
+    }
+
+    signupBtn.disabled = true
+    signupBtn.textContent = 'Creating account...'
+
+    try {
+        const { data, error } = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+                data: { full_name: name }
+            }
+        })
+
+        if (error) throw error
+
+        showAuthAlert('Account created successfully! Redirecting...', false)
+
+        const targetUrl = getSafeRedirectUrl()
+        setTimeout(() => {
+            window.location.href = targetUrl
+        }, 1200)
+
+    } catch (err) {
+        showAuthAlert(err.message || 'Error creating account.')
+        signupBtn.disabled = false
+        signupBtn.textContent = 'Create Account'
     }
 }
 
@@ -40,28 +128,41 @@ if (signupBtn) {
     })
 }
 
-// ── Log In ──
+// ── Log In Handler ──
 const loginBtn = document.getElementById('login-btn')
 
 async function handleLogin() {
-    const email = document.getElementById('email').value
-    const password = document.getElementById('password').value
+    const emailEl = document.getElementById('email')
+    const passwordEl = document.getElementById('password')
+
+    if (!emailEl || !passwordEl) return
+
+    const email = emailEl.value.trim().toLowerCase()
+    const password = passwordEl.value
 
     if (!email || !password) {
-        alert('Please fill in all fields')
+        showAuthAlert('Please fill in both email and password.')
         return
     }
 
-    const { error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password
-    })
+    loginBtn.disabled = true
+    loginBtn.textContent = 'Logging in...'
 
-    if (error) {
-        alert('Error: ' + error.message)
-    } else {
-        const redirectUrl = getRedirectUrl()
+    try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+        })
+
+        if (error) throw error
+
+        const redirectUrl = getSafeRedirectUrl()
         window.location.href = redirectUrl
+
+    } catch (err) {
+        showAuthAlert(err.message || 'Invalid login credentials.')
+        loginBtn.disabled = false
+        loginBtn.textContent = 'Log In'
     }
 }
 
@@ -72,13 +173,21 @@ if (loginBtn) {
     })
 }
 
-// ── Log Out ──
+// ── Log Out Handler ──
 const logoutBtn = document.getElementById('logout-btn')
 
 if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-        await supabaseClient.auth.signOut()
-        window.location.href = 'index.html'
+    logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault()
+        try {
+            await supabaseClient.auth.signOut()
+        } catch (err) {
+            console.warn('Signout issue:', err)
+        } finally {
+            localStorage.clear()
+            sessionStorage.clear()
+            window.location.href = 'index.html'
+        }
     })
 }
 
@@ -92,93 +201,100 @@ if (window.location.pathname.includes('account.html')) {
 
         if (!session) {
             window.location.href = 'login.html'
-        } else {
-            const name = session.user.user_metadata.full_name || 'there'
-            document.getElementById('user-name').textContent = name
-
-            const { data, error } = await supabaseClient
-                .from('bookings')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .order('created_at', { ascending: false })
-
-            const bookingsDiv = document.getElementById('no-bookings')
-
-            if (error || !data || data.length === 0) {
-                bookingsDiv.innerHTML = '<p>You have no bookings yet. <a href="booking.html">Book a service</a></p>'
-                return
-            }
-
-            // ── Split active and cancelled ──
-            const thirtyDaysAgo = new Date()
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-            const activeBookings = data.filter(b => b.status !== 'cancelled')
-            const cancelledBookings = data.filter(b => {
-                if (b.status !== 'cancelled') return false
-                return new Date(b.created_at) > thirtyDaysAgo
-            })
-
-            // ── Render booking card ──
-            function renderCard(booking, faded = false) {
-                return `
-                    <div class="booking-card ${faded ? 'booking-card-faded' : ''}">
-                        <h3>${booking.service_type.replace(/-/g, ' ')}</h3>
-                        <p><strong>Date:</strong> ${new Date(booking.preferred_date).toLocaleDateString('en-GB')}</p>
-                        <p><strong>Time:</strong> ${booking.preferred_time || 'Flexible'}</p>
-                        <p><strong>Address:</strong> ${booking.address || 'Not specified'}</p>
-                        <p><strong>Status:</strong> <span class="booking-status ${booking.status}">${booking.status}</span></p>
-                        ${booking.status !== 'cancelled' && booking.status !== 'completed' ? `
-                            <button class="cancel-booking-btn" data-id="${booking.id}">Cancel Booking</button>
-                        ` : ''}
-                    </div>
-                `
-            }
-
-            let html = ''
-
-            // Active bookings first
-            if (activeBookings.length > 0) {
-                html += activeBookings.map(b => renderCard(b)).join('')
-            } else {
-                html += '<p>You have no active bookings. <a href="booking.html">Book a service</a></p>'
-            }
-
-            // Cancelled bookings collapsed at bottom
-            if (cancelledBookings.length > 0) {
-                html += `
-                    <details class="cancelled-bookings-details">
-                        <summary>Show cancelled bookings (${cancelledBookings.length})</summary>
-                        <div class="cancelled-bookings-list">
-                            ${cancelledBookings.map(b => renderCard(b, true)).join('')}
-                        </div>
-                    </details>
-                `
-            }
-
-            bookingsDiv.innerHTML = html
-
-            // ── Cancel button click — show modal ──
-            document.querySelectorAll('.cancel-booking-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    bookingToCancel = btn.dataset.id
-                    document.getElementById('cancel-modal').style.display = 'flex'
-                })
-            })
+            return
         }
+
+        const rawName = session.user.user_metadata?.full_name || 'there'
+        const userGreeting = document.getElementById('user-name')
+        if (userGreeting) userGreeting.textContent = rawName
+
+        const { data, error } = await supabaseClient
+            .from('bookings')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false })
+
+        const bookingsDiv = document.getElementById('no-bookings')
+        if (!bookingsDiv) return
+
+        if (error || !data || data.length === 0) {
+            bookingsDiv.innerHTML = '<p>You have no bookings yet. <a href="booking.html">Book a service</a></p>'
+            return
+        }
+
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+        const activeBookings = data.filter(b => b.status !== 'cancelled')
+        const cancelledBookings = data.filter(b => {
+            if (b.status !== 'cancelled') return false
+            return new Date(b.created_at) > thirtyDaysAgo
+        })
+
+        function renderCard(booking, faded = false) {
+            const cleanService = escapeHtml((booking.service_type || '').replace(/-/g, ' '))
+            const cleanDate = escapeHtml(new Date(booking.preferred_date).toLocaleDateString('en-GB'))
+            const cleanTime = escapeHtml(booking.preferred_time || 'Flexible')
+            const cleanAddress = escapeHtml(booking.address || 'Not specified')
+            const cleanStatus = escapeHtml(booking.status || 'pending')
+            const cleanId = escapeHtml(booking.id)
+
+            return `
+                <div class="booking-card ${faded ? 'booking-card-faded' : ''}">
+                    <h3>${cleanService}</h3>
+                    <p><strong>Date:</strong> ${cleanDate}</p>
+                    <p><strong>Time:</strong> ${cleanTime}</p>
+                    <p><strong>Address:</strong> ${cleanAddress}</p>
+                    <p><strong>Status:</strong> <span class="booking-status ${cleanStatus}">${cleanStatus}</span></p>
+                    ${booking.status !== 'cancelled' && booking.status !== 'completed' ? `
+                        <button class="cancel-booking-btn" data-id="${cleanId}">Cancel Booking</button>
+                    ` : ''}
+                </div>
+            `
+        }
+
+        let html = ''
+
+        if (activeBookings.length > 0) {
+            html += activeBookings.map(b => renderCard(b)).join('')
+        } else {
+            html += '<p>You have no active bookings. <a href="booking.html">Book a service</a></p>'
+        }
+
+        if (cancelledBookings.length > 0) {
+            html += `
+                <details class="cancelled-bookings-details">
+                    <summary>Show cancelled bookings (${cancelledBookings.length})</summary>
+                    <div class="cancelled-bookings-list">
+                        ${cancelledBookings.map(b => renderCard(b, true)).join('')}
+                    </div>
+                </details>
+            `
+        }
+
+        bookingsDiv.innerHTML = html
+
+        document.querySelectorAll('.cancel-booking-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                bookingToCancel = btn.dataset.id
+                const modal = document.getElementById('cancel-modal')
+                if (modal) modal.style.display = 'flex'
+            })
+        })
     }
+
     checkSession()
 
-    // ── Close modal ──
+    // ── Modal Interactions ──
     const closeModalBtn = document.getElementById('close-modal-btn')
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
-            document.getElementById('cancel-modal').style.display = 'none'
+            const modal = document.getElementById('cancel-modal')
+            if (modal) modal.style.display = 'none'
             bookingToCancel = null
         })
     }
 
-    // ── Close modal on overlay click ──
     const modal = document.getElementById('cancel-modal')
     if (modal) {
         modal.addEventListener('click', (e) => {
@@ -189,23 +305,28 @@ if (window.location.pathname.includes('account.html')) {
         })
     }
 
-    // ── Confirm cancellation ──
     const confirmCancelBtn = document.getElementById('confirm-cancel-btn')
     if (confirmCancelBtn) {
         confirmCancelBtn.addEventListener('click', async () => {
             if (!bookingToCancel) return
+
+            confirmCancelBtn.disabled = true
+            confirmCancelBtn.textContent = 'Cancelling...'
 
             const { error } = await supabaseClient
                 .from('bookings')
                 .update({ status: 'cancelled' })
                 .eq('id', bookingToCancel)
 
+            confirmCancelBtn.disabled = false
+            confirmCancelBtn.textContent = 'Yes, Cancel Booking'
+
             if (error) {
                 alert('Error cancelling booking: ' + error.message)
                 return
             }
 
-            document.getElementById('cancel-modal').style.display = 'none'
+            if (modal) modal.style.display = 'none'
             bookingToCancel = null
             checkSession()
         })

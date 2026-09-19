@@ -2206,3 +2206,26 @@ footer {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 20px;
 }
+
+
+
+
+
+/* ── Service Item Book Buttons ── */
+.services-list .service-item-text .btn {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 10px 20px;
+    font-size: 14px;
+}
+
+/* ── Form Alert Box for Login / Signup ── */
+#auth-alert {
+    display: none;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.4;
+    transition: all 0.2s ease;
+}

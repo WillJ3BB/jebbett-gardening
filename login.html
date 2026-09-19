@@ -13,7 +13,7 @@
     <header>
         <div class="logo">
             <a href="index.html">
-                <img src="images/jebbett-logo.jpeg">
+                <img src="images/jebbett-logo.jpeg" alt="Jebbett Gardening Logo">
             </a>
         </div>
         <button class="hamburger" id="hamburger">
@@ -44,16 +44,17 @@
 
         <section class="auth-section">
             <div class="auth-form">
+                <div id="auth-alert" style="display:none; padding:10px; margin-bottom:15px; border-radius:4px; font-size:14px;"></div>
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" placeholder="Your email">
+                    <input type="email" id="email" placeholder="Your email" autocomplete="email" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="Your password">
+                    <input type="password" id="password" placeholder="Your password" autocomplete="current-password" required>
                 </div>
                 <button class="btn" id="login-btn">Log In</button>
-                <p class="auth-link">Don't have an account? <a href="signup.html">Sign up here</a></p>
+                <p class="auth-link">Don't have an account? <a href="signup.html" id="to-signup-link">Sign up here</a></p>
             </div>
         </section>
 
