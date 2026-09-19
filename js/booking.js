@@ -2,10 +2,51 @@
 async function checkAuth() {
     const { data: { session } } = await supabaseClient.auth.getSession()
     if (!session) {
-        window.location.href = 'login.html?redirect=booking.html'
+        // Carry current query parameters (e.g. ?service=...) through the login redirect
+        const redirectParam = encodeURIComponent('booking.html' + window.location.search)
+        window.location.href = `login.html?redirect=${redirectParam}`
         return false
     }
     return true
+}
+
+// ── Auto-select service from URL parameter (e.g. ?service=lawn-mowing) ──
+function preselectServiceFromUrl() {
+    const params = new URLSearchParams(window.location.search)
+    const requestedService = params.get('service')
+
+    if (!requestedService) return
+
+    const select = document.getElementById('service')
+    if (!select) return
+
+    const target = requestedService.toLowerCase().trim()
+
+    // 1. Exact value match
+    for (let opt of select.options) {
+        if (opt.value.toLowerCase() === target) {
+            select.value = opt.value
+            return
+        }
+    }
+
+    // 2. Fuzzy match fallback
+    for (let opt of select.options) {
+        const text = opt.textContent.toLowerCase()
+        const val = opt.value.toLowerCase()
+
+        if (
+            (target.includes('lawn') && (text.includes('lawn') || val.includes('lawn'))) ||
+            (target.includes('hedge') && (text.includes('hedge') || val.includes('hedge'))) ||
+            (target.includes('clearance') && (text.includes('clearance') || val.includes('clearance'))) ||
+            ((target.includes('plant') || target.includes('border') || target.includes('bed')) && 
+             (text.includes('plant') || text.includes('border') || val.includes('plant') || val.includes('border'))) ||
+            (target.includes('maintenance') && (text.includes('maintenance') || val.includes('maintenance')))
+        ) {
+            select.value = opt.value
+            return
+        }
+    }
 }
 
 // ── Form validation ──
@@ -291,6 +332,7 @@ document.addEventListener('keydown', (e) => {
 // ── Init ──
 checkAuth().then(isAuth => {
     if (isAuth) {
+        preselectServiceFromUrl()
         loadBookedCounts().then(renderCalendar)
     }
 })

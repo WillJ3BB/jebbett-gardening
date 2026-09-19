@@ -216,428 +216,191 @@ async function loadCustomers() {
 }
 loadCustomers()
 
-// ── Load gallery options ──
-// ── Load gallery options with standard 5 categories ──
-const DEFAULT_CATEGORIES = [
-    'Lawn Cuts',
-    'Hedge Trimming',
-    'Garden Clearance',
-    'Planting Beds',
-    'General Maintenance'
-];
+// ══════════════════════════════════════════════════════════
+// ── Unlimited Simple Portfolio Uploader & Manager ──
+// ══════════════════════════════════════════════════════════
+let selectedUploadFiles = []
+let allPortfolioRecords = []
 
-async function loadGalleries() {
-    const { data } = await supabaseClient
-        .from('portfolio')
-        .select('gallery')
-        .not('gallery', 'is', null)
+// File preview
+const fileInput = document.getElementById('portfolio-files')
+const previewContainer = document.getElementById('upload-preview')
 
-    const dbGalleries = data?.map(d => d.gallery).filter(Boolean) || []
-    // Combine standard 5 with any existing galleries
-    const allGalleries = [...new Set([...DEFAULT_CATEGORIES, ...dbGalleries])]
+if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+        selectedUploadFiles = Array.from(e.target.files)
+        previewContainer.innerHTML = ''
 
-    const select = document.getElementById('gallery')
-    select.innerHTML = '<option value="">Select category frame...</option>'
-    allGalleries.forEach(gal => {
-        const opt = document.createElement('option')
-        opt.value = gal
-        opt.textContent = gal
-        select.appendChild(opt)
+        if (selectedUploadFiles.length === 0) return
+
+        selectedUploadFiles.forEach((file) => {
+            const reader = new FileReader()
+            reader.onload = (ev) => {
+                const item = document.createElement('div')
+                item.className = 'simple-preview-thumb'
+                item.innerHTML = `<img src="${ev.target.result}" alt="Preview">`
+                previewContainer.appendChild(item)
+            }
+            reader.readAsDataURL(file)
+        })
     })
 }
 
-// ── Toggle new gallery input ──
-if (document.getElementById('toggle-new-gallery-btn')) {
-    document.getElementById('toggle-new-gallery-btn').addEventListener('click', () => {
-        const input = document.getElementById('new-gallery')
-        const select = document.getElementById('gallery')
-        const isHidden = input.style.display === 'none'
-        
-        input.style.display = isHidden ? 'block' : 'none'
-        select.style.display = isHidden ? 'none' : 'block'
-        input.value = ''
+// Handle bulk image upload
+const uploadBtn = document.getElementById('simple-upload-btn')
+if (uploadBtn) {
+    uploadBtn.addEventListener('click', async () => {
+        const category = document.getElementById('upload-category').value
+        const status = document.getElementById('simple-upload-status')
+        const progressBar = document.getElementById('upload-progress-bar')
+        const progressFill = document.getElementById('progress-fill')
+
+        if (!selectedUploadFiles || selectedUploadFiles.length === 0) {
+            status.textContent = 'Please choose at least one photo.'
+            status.style.color = '#cc0000'
+            return
+        }
+
+        status.textContent = `Uploading 1 of ${selectedUploadFiles.length}...`
+        status.style.color = '#2d5a27'
+        progressBar.style.display = 'block'
+        uploadBtn.disabled = true
+
+        const uploadedUrls = []
+
+        try {
+            for (let i = 0; i < selectedUploadFiles.length; i++) {
+                const file = selectedUploadFiles[i]
+                const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+                const path = `gallery/${Date.now()}-${i}-${cleanName}`
+
+                const { error: uploadError } = await supabaseClient.storage
+                    .from('Portfolio')
+                    .upload(path, file)
+
+                if (uploadError) throw uploadError
+
+                const { data: urlData } = supabaseClient.storage
+                    .from('Portfolio')
+                    .getPublicUrl(path)
+
+                uploadedUrls.push(urlData.publicUrl)
+
+                const percent = Math.round(((i + 1) / selectedUploadFiles.length) * 100)
+                progressFill.style.width = `${percent}%`
+                status.textContent = `Uploaded ${i + 1} of ${selectedUploadFiles.length}...`
+            }
+
+            // Save records directly under the selected category frame
+            const { error: insertError } = await supabaseClient
+                .from('portfolio')
+                .insert([{
+                    title: category,
+                    gallery: category,
+                    image_urls: uploadedUrls,
+                    created_at: new Date().toISOString()
+                }])
+
+            if (insertError) throw insertError
+
+            status.textContent = `Successfully uploaded ${uploadedUrls.length} photo(s) to ${category}!`
+            status.style.color = '#2d5a27'
+            fileInput.value = ''
+            previewContainer.innerHTML = ''
+            selectedUploadFiles = []
+            loadSimpleEntries()
+        } catch (err) {
+            console.error('Upload error:', err)
+            status.textContent = `Upload failed: ${err.message}`
+            status.style.color = '#cc0000'
+        } finally {
+            uploadBtn.disabled = false
+            setTimeout(() => { progressBar.style.display = 'none' }, 2500)
+        }
     })
 }
 
-loadGalleries()
+// Load uploaded entries into management grid
+async function loadSimpleEntries() {
+    const grid = document.getElementById('simple-photos-grid')
+    if (!grid) return
 
-// ── Track removed photos per entry ──
-const removedPhotos = {}
-
-// ── Load existing portfolio entries ──
-async function loadEntries() {
     const { data, error } = await supabaseClient
         .from('portfolio')
         .select('*')
         .order('created_at', { ascending: false })
 
-    const list = document.getElementById('entries-list')
-
-    if (error || !data || data.length === 0) {
-        list.innerHTML = '<p>No entries yet.</p>'
+    if (error || !data) {
+        grid.innerHTML = '<p>No photos found.</p>'
         return
     }
 
-    list.innerHTML = data.map(entry => {
-        const images = entry.image_urls && entry.image_urls.length > 0
-            ? entry.image_urls
-            : [entry.before_image_url, entry.after_image_url].filter(Boolean)
+    allPortfolioRecords = data
+    filterEntriesList()
+}
 
-        return `
-            <div class="entry-card" id="entry-${entry.id}">
-                <div class="entry-view">
-                    <h3>${entry.title}</h3>
-                    <p>${entry.description || ''}</p>
-                    <p><strong>Gallery:</strong> ${entry.gallery || 'Not assigned'}</p>
-                    <p><strong>Location:</strong> ${entry.location || 'Not specified'}</p>
-                    <p><strong>Photos:</strong> ${images.length}</p>
-                    <div class="entry-actions">
-                        <button class="edit-entry-btn" onclick="toggleEdit('${entry.id}', ${JSON.stringify(images).replace(/"/g, '&quot;')})">Edit</button>
-                        <button onclick="deleteEntry('${entry.id}', ${JSON.stringify(images).replace(/"/g, '&quot;')})">Delete</button>
-                    </div>
-                </div>
-                <div class="entry-edit" id="edit-${entry.id}" style="display:none;">
-                    <div class="form-group">
-                        <label>Title</label>
-                        <input type="text" id="edit-title-${entry.id}" value="${entry.title}">
-                    </div>
-                    <div class="form-group">
-                        <label>Gallery</label>
-                        <div class="gallery-select-group">
-                            <select id="edit-gallery-${entry.id}">
-                                <option value="">Select gallery...</option>
-                            </select>
-                            <input type="text" id="edit-new-gallery-${entry.id}" placeholder="New gallery name..." style="display:none;">
-                            <button type="button" class="toggle-new-gallery-btn" onclick="toggleEditNewGallery('${entry.id}')">+ New</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea id="edit-desc-${entry.id}" rows="3">${entry.description || ''}</textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Location</label>
-                        <input type="text" id="edit-loc-${entry.id}" value="${entry.location || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label>Current Photos <small>(click ✕ to remove)</small></label>
-                        <div class="edit-photos-grid" id="edit-photos-${entry.id}"></div>
-                    </div>
-                    <div class="form-group">
-                        <label>Add New Photos</label>
-                        <input type="file" id="edit-new-images-${entry.id}" accept="image/*" multiple>
-                    </div>
-                    <div class="entry-actions">
-                        <button class="save-entry-btn" onclick="saveEntry('${entry.id}')">Save</button>
-                        <button class="cancel-edit-btn" onclick="toggleEdit('${entry.id}', [])">Cancel</button>
-                    </div>
-                    <p id="edit-status-${entry.id}" style="font-size:13px;margin-top:8px;"></p>
-                </div>
-            </div>
-        `
-    }).join('')
+function filterEntriesList() {
+    const grid = document.getElementById('simple-photos-grid')
+    const totalCount = document.getElementById('total-photos-count')
+    const filter = document.getElementById('filter-manage-category').value
 
-    // Populate gallery dropdowns in edit views
-    const { data: allGalleries } = await supabaseClient
-        .from('portfolio')
-        .select('gallery')
-        .not('gallery', 'is', null)
+    let displayPhotos = []
 
-    const galleries = [...new Set(allGalleries?.map(d => d.gallery).filter(Boolean) || [])]
+    allPortfolioRecords.forEach(record => {
+        if (filter !== 'ALL' && record.gallery !== filter) return
 
-    data.forEach(entry => {
-        const select = document.getElementById(`edit-gallery-${entry.id}`)
-        if (select) {
-            select.innerHTML = '<option value="">Select gallery...</option>'
-            galleries.forEach(gal => {
-                const opt = document.createElement('option')
-                opt.value = gal
-                opt.textContent = gal
-                if (gal === entry.gallery) opt.selected = true
-                select.appendChild(opt)
+        const imgs = record.image_urls && record.image_urls.length > 0
+            ? record.image_urls
+            : [record.after_image_url, record.before_image_url].filter(Boolean)
+
+        imgs.forEach((url) => {
+            displayPhotos.push({
+                recordId: record.id,
+                gallery: record.gallery || 'General Maintenance',
+                url: url
             })
-        }
-    })
-}
-loadEntries()
-
-// ── Toggle new gallery in edit mode ──
-function toggleEditNewGallery(entryId) {
-    const input = document.getElementById(`edit-new-gallery-${entryId}`)
-    const select = document.getElementById(`edit-gallery-${entryId}`)
-    const isHidden = input.style.display === 'none'
-    
-    input.style.display = isHidden ? 'block' : 'none'
-    select.style.display = isHidden ? 'none' : 'block'
-    input.value = ''
-}
-
-// ── Toggle edit mode ──
-function toggleEdit(id, images) {
-    const view = document.querySelector(`#entry-${id} .entry-view`)
-    const edit = document.getElementById(`edit-${id}`)
-    const isEditing = edit.style.display === 'block'
-
-    view.style.display = isEditing ? 'block' : 'none'
-    edit.style.display = isEditing ? 'none' : 'block'
-
-    if (!isEditing) {
-        removedPhotos[id] = []
-        const grid = document.getElementById(`edit-photos-${id}`)
-        grid.innerHTML = images.map((url, i) => `
-            <div class="edit-photo-item" id="edit-photo-${id}-${i}">
-                <img src="${url}" alt="Photo ${i + 1}">
-                <button class="remove-photo-btn" onclick="removePhoto('${id}', ${i}, '${url}')">✕</button>
-            </div>
-        `).join('')
-    }
-}
-
-// ── Remove a photo from edit view ──
-function removePhoto(entryId, index, url) {
-    if (!removedPhotos[entryId]) removedPhotos[entryId] = []
-    removedPhotos[entryId].push(url)
-    const item = document.getElementById(`edit-photo-${entryId}-${index}`)
-    if (item) item.style.opacity = '0.3'
-    const btn = item.querySelector('.remove-photo-btn')
-    if (btn) btn.textContent = '↩'
-    btn.onclick = () => restorePhoto(entryId, index, url)
-}
-
-// ── Restore a removed photo ──
-function restorePhoto(entryId, index, url) {
-    removedPhotos[entryId] = removedPhotos[entryId].filter(u => u !== url)
-    const item = document.getElementById(`edit-photo-${entryId}-${index}`)
-    if (item) item.style.opacity = '1'
-    const btn = item.querySelector('.remove-photo-btn')
-    if (btn) btn.textContent = '✕'
-    btn.onclick = () => removePhoto(entryId, index, url)
-}
-
-// ── Save portfolio entry edits ──
-async function saveEntry(id) {
-    const title = document.getElementById(`edit-title-${id}`).value
-    const description = document.getElementById(`edit-desc-${id}`).value
-    const location = document.getElementById(`edit-loc-${id}`).value
-    const gallerySelect = document.getElementById(`edit-gallery-${id}`)
-    const galleryInput = document.getElementById(`edit-new-gallery-${id}`)
-    const gallery = galleryInput.style.display === 'block' ? galleryInput.value : gallerySelect.value
-    const newFiles = document.getElementById(`edit-new-images-${id}`).files
-    const statusEl = document.getElementById(`edit-status-${id}`)
-
-    if (!title) {
-        statusEl.textContent = 'Title is required'
-        statusEl.style.color = 'red'
-        return
-    }
-
-    if (!gallery) {
-        statusEl.textContent = 'Gallery is required'
-        statusEl.style.color = 'red'
-        return
-    }
-
-    statusEl.textContent = 'Saving...'
-    statusEl.style.color = '#2d5a27'
-
-    // Get current entry images
-    const { data: entry } = await supabaseClient
-        .from('portfolio')
-        .select('image_urls, before_image_url, after_image_url')
-        .eq('id', id)
-        .single()
-
-    let currentImages = entry.image_urls && entry.image_urls.length > 0
-        ? entry.image_urls
-        : [entry.before_image_url, entry.after_image_url].filter(Boolean)
-
-    // Remove marked photos from storage and array
-    const toRemove = removedPhotos[id] || []
-    for (const url of toRemove) {
-        const path = url.split('/Portfolio/')[1]
-        if (path) await supabaseClient.storage.from('Portfolio').remove([path])
-    }
-    currentImages = currentImages.filter(url => !toRemove.includes(url))
-
-    // Upload new photos
-    for (let i = 0; i < newFiles.length; i++) {
-        const file = newFiles[i]
-        const path = `progress/${Date.now()}-${i}-${file.name}`
-
-        const { error: uploadError } = await supabaseClient.storage
-            .from('Portfolio')
-            .upload(path, file)
-
-        if (uploadError) {
-            statusEl.textContent = `Error uploading photo: ${uploadError.message}`
-            statusEl.style.color = 'red'
-            return
-        }
-
-        const { data: urlData } = supabaseClient.storage
-            .from('Portfolio')
-            .getPublicUrl(path)
-
-        currentImages.push(urlData.publicUrl)
-    }
-
-    if (currentImages.length < 2) {
-        statusEl.textContent = 'At least 2 photos required'
-        statusEl.style.color = 'red'
-        return
-    }
-
-    const { error } = await supabaseClient
-        .from('portfolio')
-        .update({
-            title,
-            description,
-            location,
-            gallery,
-            image_urls: currentImages,
-            image_count: currentImages.length,
-            before_image_url: currentImages[0],
-            after_image_url: currentImages[currentImages.length - 1]
         })
-        .eq('id', id)
-
-    if (error) {
-        statusEl.textContent = 'Error saving: ' + error.message
-        statusEl.style.color = 'red'
-        return
-    }
-
-    loadEntries()
-}
-
-// ── Upload portfolio entry ──
-document.getElementById('upload-btn').addEventListener('click', async () => {
-    const title = document.getElementById('title').value
-    const description = document.getElementById('description').value
-    const location = document.getElementById('location').value
-    const gallerySelect = document.getElementById('gallery')
-    const galleryInput = document.getElementById('new-gallery')
-    const gallery = galleryInput.style.display === 'block' ? galleryInput.value : gallerySelect.value
-    const files = document.getElementById('portfolio-images').files
-    const status = document.getElementById('upload-status')
-
-    if (!title || files.length < 2) {
-        status.textContent = 'Please add a title and at least 2 photos'
-        status.style.color = 'red'
-        return
-    }
-
-    if (!gallery) {
-        status.textContent = 'Please select or create a gallery'
-        status.style.color = 'red'
-        return
-    }
-
-    if (files.length > 5) {
-        status.textContent = 'Maximum 5 photos allowed'
-        status.style.color = 'red'
-        return
-    }
-
-    status.textContent = 'Uploading...'
-    status.style.color = '#2d5a27'
-
-    const imageUrls = []
-
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i]
-        const path = `progress/${Date.now()}-${i}-${file.name}`
-
-        const { error: uploadError } = await supabaseClient.storage
-            .from('Portfolio')
-            .upload(path, file)
-
-        if (uploadError) {
-            status.textContent = `Error uploading photo ${i + 1}: ${uploadError.message}`
-            status.style.color = 'red'
-            return
-        }
-
-        const { data: urlData } = supabaseClient.storage
-            .from('Portfolio')
-            .getPublicUrl(path)
-
-        imageUrls.push(urlData.publicUrl)
-        status.textContent = `Uploading ${i + 1} of ${files.length}...`
-    }
-
-    const { error: insertError } = await supabaseClient
-        .from('portfolio')
-        .insert([{
-            title,
-            description,
-            location,
-            gallery,
-            image_urls: imageUrls,
-            image_count: imageUrls.length,
-            before_image_url: imageUrls[0],
-            after_image_url: imageUrls[imageUrls.length - 1]
-        }])
-
-    if (insertError) {
-        status.textContent = 'Error saving entry: ' + insertError.message
-        status.style.color = 'red'
-        return
-    }
-
-    status.textContent = `Entry uploaded successfully with ${imageUrls.length} photos!`
-    document.getElementById('title').value = ''
-    document.getElementById('description').value = ''
-    document.getElementById('location').value = ''
-    document.getElementById('gallery').value = ''
-    document.getElementById('new-gallery').value = ''
-    document.getElementById('new-gallery').style.display = 'none'
-    document.getElementById('gallery').style.display = 'block'
-    document.getElementById('portfolio-images').value = ''
-    document.getElementById('image-preview').innerHTML = ''
-    loadEntries()
-    loadGalleries()
-})
-
-// ── Image preview ──
-document.getElementById('portfolio-images').addEventListener('change', (e) => {
-    const preview = document.getElementById('image-preview')
-    const files = e.target.files
-    preview.innerHTML = ''
-
-    if (files.length > 5) {
-        preview.innerHTML = '<p style="color:red">Maximum 5 photos allowed</p>'
-        return
-    }
-
-    Array.from(files).forEach((file, i) => {
-        const reader = new FileReader()
-        reader.onload = (ev) => {
-            const total = files.length
-            let label = ''
-            if (i === 0) label = 'Before'
-            else if (i === total - 1) label = 'After'
-
-            preview.innerHTML += `
-                <div class="image-preview-item">
-                    <img src="${ev.target.result}" alt="Preview ${i + 1}">
-                    ${label ? `<span class="preview-label">${label}</span>` : ''}
-                </div>
-            `
-        }
-        reader.readAsDataURL(file)
     })
-})
 
-// ── Delete portfolio entry ──
-async function deleteEntry(id, imageUrls) {
-    if (!confirm('Are you sure you want to delete this entry?')) return
+    if (totalCount) totalCount.textContent = displayPhotos.length
 
-    for (const url of imageUrls) {
-        const path = url.split('/Portfolio/')[1]
-        if (path) await supabaseClient.storage.from('Portfolio').remove([path])
+    if (displayPhotos.length === 0) {
+        grid.innerHTML = '<p style="color:#777;">No photos in this category.</p>'
+        return
     }
 
-    await supabaseClient.from('portfolio').delete().eq('id', id)
-    loadEntries()
+    grid.innerHTML = displayPhotos.map(item => `
+        <div class="admin-photo-card">
+            <img src="${item.url}" alt="Uploaded photo">
+            <div class="admin-photo-overlay">
+                <span class="photo-category-pill">${item.gallery}</span>
+                <button class="delete-photo-btn" onclick="deleteIndividualPhoto('${item.recordId}', '${item.url}')" title="Delete photo">✕</button>
+            </div>
+        </div>
+    `).join('')
 }
+
+// Delete an image from storage & database
+async function deleteIndividualPhoto(recordId, targetUrl) {
+    if (!confirm('Are you sure you want to delete this photo?')) return
+
+    const path = targetUrl.split('/Portfolio/')[1]
+    if (path) {
+        await supabaseClient.storage.from('Portfolio').remove([path])
+    }
+
+    const record = allPortfolioRecords.find(r => r.id == recordId)
+    if (!record) return
+
+    const currentImages = (record.image_urls || []).filter(u => u !== targetUrl)
+
+    if (currentImages.length === 0) {
+        await supabaseClient.from('portfolio').delete().eq('id', recordId)
+    } else {
+        await supabaseClient.from('portfolio').update({ image_urls: currentImages }).eq('id', recordId)
+    }
+
+    loadSimpleEntries()
+}
+
+loadSimpleEntries()

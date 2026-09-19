@@ -1,21 +1,32 @@
 // ── 5 Dedicated Frames / Headings ──
-// (You can rename any of these to match your exact 5 services)
 const CATEGORIES = [
     'Lawn Cuts',
     'Hedge Trimming',
     'Garden Clearance',
-    'Planting Bed',
+    'Planting & Borders',
     'General Maintenance'
 ];
 
-// Track active slide index for each frame
+// Helper to normalize category names so variations match the right frame
+function normalizeCategory(raw) {
+    if (!raw) return null;
+    const clean = raw.trim().toLowerCase();
+    
+    if (clean.includes('lawn') || clean.includes('cut') || clean.includes('mow')) return 'Lawn Cuts';
+    if (clean.includes('hedge') || clean.includes('trim')) return 'Hedge Trimming';
+    if (clean.includes('clearance') || clean.includes('waste')) return 'Garden Clearance';
+    if (clean.includes('plant') || clean.includes('border') || clean.includes('bed')) return 'Planting & Borders';
+    if (clean.includes('maintenance')) return 'General Maintenance';
+
+    return null;
+}
+
 const frameIndices = {};
 window.categorySlides = {};
 
 async function loadPortfolio() {
     const grid = document.getElementById('portfolio-grid');
 
-    // Fetch all entries sorted by newest first
     const { data, error } = await supabaseClient
         .from('portfolio')
         .select('*')
@@ -27,16 +38,19 @@ async function loadPortfolio() {
         return;
     }
 
-    // Initialize buckets for each of the 5 categories
+    // Initialize buckets for each frame
     CATEGORIES.forEach(cat => {
         window.categorySlides[cat] = [];
         frameIndices[cat] = 0;
     });
 
-    // Populate the categories with images from Supabase
     if (data && data.length > 0) {
         data.forEach(entry => {
-            const galleryName = entry.gallery || 'General Maintenance';
+            // Find which frame this belongs to
+            const matchedCategory = normalizeCategory(entry.gallery) || normalizeCategory(entry.title);
+
+            // If it doesn't match any of our 5, skip rather than dumping into Lawn Cuts
+            if (!matchedCategory || !window.categorySlides[matchedCategory]) return;
 
             const images = entry.image_urls && entry.image_urls.length > 0
                 ? entry.image_urls
@@ -49,20 +63,13 @@ async function loadPortfolio() {
                 if (i === 0 && total > 1) label = 'Before';
                 else if (i === total - 1 && total > 1) label = 'After';
 
-                const slide = {
+                window.categorySlides[matchedCategory].push({
                     url,
                     label,
-                    title: entry.title || galleryName,
+                    title: entry.title || matchedCategory,
                     location: entry.location || '',
                     description: entry.description || ''
-                };
-
-                if (window.categorySlides[galleryName]) {
-                    window.categorySlides[galleryName].push(slide);
-                } else {
-                    // Fallback to the first category if an entry has an unrecognized name
-                    window.categorySlides[CATEGORIES[0]].push(slide);
-                }
+                });
             });
         });
     }
@@ -79,9 +86,7 @@ async function loadPortfolio() {
             <div class="category-frame" id="frame-${idx}">
                 <div class="frame-header">
                     <h2>${categoryName}</h2>
-                    <span class="frame-counter" id="counter-${idx}">
-                        ${hasImages ? `1 / ${slides.length}` : '0 / 0'}
-                    </span>
+                    ${hasImages ? `<span class="frame-counter" id="counter-${idx}">1 / ${slides.length}</span>` : ''}
                 </div>
 
                 <div class="frame-viewport">
@@ -128,30 +133,37 @@ function shiftFrame(categoryName, frameIdx, delta) {
     const slide = slides[currentIndex];
     const img = document.getElementById(`frame-img-${frameIdx}`);
 
-    // Quick subtle fade for smooth browsing
     img.style.opacity = '0.3';
     setTimeout(() => {
         img.src = slide.url;
         img.alt = slide.title;
         img.style.opacity = '1';
 
-        document.getElementById(`counter-${frameIdx}`).textContent = `${currentIndex + 1} / ${slides.length}`;
+        const counterEl = document.getElementById(`counter-${frameIdx}`);
+        if (counterEl) counterEl.textContent = `${currentIndex + 1} / ${slides.length}`;
 
         const labelEl = document.getElementById(`label-${frameIdx}`);
-        if (slide.label) {
-            labelEl.textContent = slide.label;
-            labelEl.style.display = 'block';
-        } else {
-            labelEl.style.display = 'none';
+        if (labelEl) {
+            if (slide.label) {
+                labelEl.textContent = slide.label;
+                labelEl.style.display = 'block';
+            } else {
+                labelEl.style.display = 'none';
+            }
         }
 
-        document.getElementById(`title-${frameIdx}`).textContent = slide.title;
-        document.getElementById(`loc-${frameIdx}`).textContent = slide.location ? `📍 ${slide.location}` : '';
-        document.getElementById(`desc-${frameIdx}`).textContent = slide.description || '';
+        const titleEl = document.getElementById(`title-${frameIdx}`);
+        if (titleEl) titleEl.textContent = slide.title;
+
+        const locEl = document.getElementById(`loc-${frameIdx}`);
+        if (locEl) locEl.textContent = slide.location ? `📍 ${slide.location}` : '';
+
+        const descEl = document.getElementById(`desc-${frameIdx}`);
+        if (descEl) descEl.textContent = slide.description || '';
     }, 120);
 }
 
-// ── Lightbox for expanded full-screen view ──
+// ── Lightbox ──
 let activeLightboxSlides = [];
 let activeLightboxIndex = 0;
 
@@ -170,7 +182,8 @@ function openFrameLightbox(categoryName) {
 function syncLightbox() {
     const slide = activeLightboxSlides[activeLightboxIndex];
     document.getElementById('lightbox-img').src = slide.url;
-    document.getElementById('lightbox-counter').textContent = `${activeLightboxIndex + 1} / ${activeLightboxSlides.length}`;
+    const counter = document.getElementById('lightbox-counter');
+    if (counter) counter.textContent = `${activeLightboxIndex + 1} / ${activeLightboxSlides.length}`;
 }
 
 function lightboxPrev() {

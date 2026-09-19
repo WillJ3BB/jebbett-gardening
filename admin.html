@@ -13,7 +13,7 @@
     <header>
         <div class="logo">
             <a href="index.html">
-                <img src="images/jebbett-logo.jpeg">
+                <img src="images/jebbett-logo.jpeg" alt="Jebbett Gardening Logo">
             </a>
         </div>
         <button class="hamburger" id="hamburger">
@@ -84,58 +84,55 @@
 
         <!-- Portfolio Management -->
         <div class="admin-divider">
-            <h2>Portfolio Management</h2>
+            <h2>Portfolio Image Uploader</h2>
         </div>
 
-        <section class="admin-section">
-
-            <div class="admin-form">
-                <h2>Add New Entry</h2>
+        <section class="admin-portfolio-simple">
+            <div class="admin-card">
+                <h3>Upload New Photos</h3>
+                <p class="admin-subtext">Select a category frame, pick any number of photos, and upload them directly to your portfolio page.</p>
 
                 <div class="form-group">
-                    <label for="title">Job Title</label>
-                    <input type="text" id="title" placeholder="e.g. Overgrown back garden clearance">
+                    <label for="upload-category"><strong>Select Category Frame:</strong></label>
+                    <select id="upload-category">
+                        <option value="Lawn Cuts">Lawn Cuts</option>
+                        <option value="Hedge Trimming">Hedge Trimming</option>
+                        <option value="Garden Clearance">Garden Clearance</option>
+                        <option value="Planting & Borders">Planting & Borders</option>
+                        <option value="General Maintenance">General Maintenance</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea id="description" rows="3" placeholder="Brief description of the job..."></textarea>
+                    <label for="portfolio-files"><strong>Choose Photos (Unlimited):</strong></label>
+                    <input type="file" id="portfolio-files" accept="image/*" multiple>
                 </div>
 
-                <div class="form-group">
-                    <label for="gallery">Gallery</label>
-                    <div class="gallery-select-group">
-                        <select id="gallery">
-                            <option value="">Select or create gallery...</option>
-                        </select>
-                        <input type="text" id="new-gallery" placeholder="New gallery name..." style="display:none;">
-                        <button type="button" id="toggle-new-gallery-btn" class="btn-secondary">+ New</button>
-                    </div>
+                <div id="upload-preview" class="upload-preview-grid"></div>
+
+                <button class="btn" id="simple-upload-btn">Upload to Portfolio</button>
+                <div id="upload-progress-bar" style="display:none;">
+                    <div id="progress-fill"></div>
                 </div>
-
-                <div class="form-group">
-                    <label for="location">Location (optional)</label>
-                    <input type="text" id="location" placeholder="e.g. Eastbourne, East Sussex">
-                </div>
-
-                <div class="form-group">
-                    <label for="portfolio-images">Photos (2–5) — first is Before, last is After</label>
-                    <input type="file" id="portfolio-images" accept="image/*" multiple>
-                </div>
-
-                <div id="image-preview" class="image-preview-grid"></div>
-
-                <button class="btn" id="upload-btn">Upload Portfolio Entry</button>
-                <p id="upload-status"></p>
+                <p id="simple-upload-status"></p>
             </div>
 
-            <div class="admin-entries">
-                <h2>Current Entries</h2>
-                <div id="entries-list">
-                    <p>Loading entries...</p>
+            <div class="admin-card">
+                <div class="entries-header-bar">
+                    <h3>Uploaded Images (<span id="total-photos-count">0</span>)</h3>
+                    <select id="filter-manage-category" onchange="filterEntriesList()">
+                        <option value="ALL">All Categories</option>
+                        <option value="Lawn Cuts">Lawn Cuts</option>
+                        <option value="Hedge Trimming">Hedge Trimming</option>
+                        <option value="Garden Clearance">Garden Clearance</option>
+                        <option value="Planting & Borders">Planting & Borders</option>
+                        <option value="General Maintenance">General Maintenance</option>
+                    </select>
+                </div>
+                <div id="simple-photos-grid" class="admin-photos-grid">
+                    <p>Loading photos...</p>
                 </div>
             </div>
-
         </section>
 
     </main>
