@@ -40,7 +40,6 @@ const bookingRefMap = new Map()
 
 function assignSequentialRefs(bookings) {
     bookingRefMap.clear()
-    // Sort ascending by created_at: earliest booking is #JEB-001
     const chronological = bookings.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
 
     chronological.forEach((b, idx) => {
@@ -205,12 +204,10 @@ function renderBookingCards() {
 
     let filtered = allBookingsList.slice()
 
-    // Filter by Folder Tab
     if (activeFolderTab !== 'all') {
         filtered = filtered.filter(b => (b.status || 'pending').toLowerCase() === activeFolderTab)
     }
 
-    // Filter by Search Query
     if (searchFilterQuery) {
         filtered = filtered.filter(b => {
             const ref = getBookingRef(b).toLowerCase()
@@ -542,7 +539,6 @@ if (uploadBtn) {
                     .from('Portfolio')
                     .getPublicUrl(path)
 
-                // Object with photo URL and user-selected badge
                 uploadedItems.push({
                     url: urlData.publicUrl,
                     label: chosenLabel
@@ -553,7 +549,6 @@ if (uploadBtn) {
                 status.textContent = `Uploaded ${i + 1} of ${selectedUploadFiles.length}...`
             }
 
-            // Save records directly under the selected category frame
             const { error: insertError } = await supabaseClient
                 .from('portfolio')
                 .insert([{
@@ -604,10 +599,15 @@ function filterEntriesList() {
     const grid = document.getElementById('simple-photos-grid')
     const totalCount = document.getElementById('total-photos-count')
     const filterSelect = document.getElementById('filter-manage-category')
+    const clearBtn = document.getElementById('clear-photos-btn')
     if (!grid || !filterSelect) return
 
     const filter = filterSelect.value
     let displayPhotos = []
+
+    if (clearBtn) {
+        clearBtn.textContent = filter === 'ALL' ? '🗑️ Clear All Photos' : `🗑️ Clear ${filter} Photos`
+    }
 
     allPortfolioRecords.forEach(record => {
         if (filter !== 'ALL' && record.gallery !== filter) return
@@ -677,6 +677,64 @@ async function deleteIndividualPhoto(recordId, encodedUrl) {
     }
 
     loadSimpleEntries()
+}
+
+// ── Clear All Photos (Selective by Category or Global) ──
+window.clearAllPhotos = async function() {
+    const filter = document.getElementById('filter-manage-category')?.value || 'ALL'
+    const targetDesc = filter === 'ALL' ? 'ALL photos across all categories' : `ALL photos under "${filter}"`
+
+    const confirmed = confirm(`⚠️ WARNING: Are you sure you want to permanently delete ${targetDesc}?\n\nThis action cannot be undone.`)
+    if (!confirmed) return
+
+    const clearBtn = document.getElementById('clear-photos-btn')
+    if (clearBtn) {
+        clearBtn.disabled = true
+        clearBtn.textContent = 'Deleting...'
+    }
+
+    try {
+        const targetRecords = allPortfolioRecords.filter(record => filter === 'ALL' || record.gallery === filter)
+
+        // 1. Gather all file storage paths to delete from Supabase Storage
+        const pathsToDelete = []
+        targetRecords.forEach(record => {
+            const imgs = Array.isArray(record.image_urls) ? record.image_urls : [record.after_image_url, record.before_image_url].filter(Boolean)
+            imgs.forEach(item => {
+                const url = typeof item === 'object' && item !== null ? item.url : item
+                if (url) {
+                    const match = url.match(/\/Portfolio\/(.+)$/)
+                    if (match && match[1]) pathsToDelete.push(match[1])
+                }
+            })
+        })
+
+        if (pathsToDelete.length > 0) {
+            await supabaseClient.storage.from('Portfolio').remove(pathsToDelete)
+        }
+
+        // 2. Delete the database records
+        const recordIds = targetRecords.map(r => r.id)
+        if (recordIds.length > 0) {
+            const { error: deleteDbError } = await supabaseClient
+                .from('portfolio')
+                .delete()
+                .in('id', recordIds)
+
+            if (deleteDbError) throw deleteDbError
+        }
+
+        alert(`Successfully cleared ${pathsToDelete.length} photo(s).`)
+        await loadSimpleEntries()
+    } catch (err) {
+        console.error('Error clearing photos:', err)
+        alert('Failed to clear photos: ' + err.message)
+    } finally {
+        if (clearBtn) {
+            clearBtn.disabled = false
+            clearBtn.textContent = filter === 'ALL' ? '🗑️ Clear All Photos' : `🗑️ Clear ${filter} Photos`
+        }
+    }
 }
 
 // ── Application Initialization ──

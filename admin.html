@@ -169,14 +169,17 @@
             <div class="admin-card">
                 <div class="entries-header-bar">
                     <h3>Uploaded Images (<span id="total-photos-count">0</span>)</h3>
-                    <select id="filter-manage-category" onchange="filterEntriesList()">
-                        <option value="ALL">All Categories</option>
-                        <option value="Lawn Cuts">Lawn Cuts</option>
-                        <option value="Hedge Trimming">Hedge Trimming</option>
-                        <option value="Garden Clearance">Garden Clearance</option>
-                        <option value="Planting & Borders">Planting & Borders</option>
-                        <option value="General Maintenance">General Maintenance</option>
-                    </select>
+                    <div class="entries-actions-wrapper">
+                        <select id="filter-manage-category" onchange="filterEntriesList()">
+                            <option value="ALL">All Categories</option>
+                            <option value="Lawn Cuts">Lawn Cuts</option>
+                            <option value="Hedge Trimming">Hedge Trimming</option>
+                            <option value="Garden Clearance">Garden Clearance</option>
+                            <option value="Planting & Borders">Planting & Borders</option>
+                            <option value="General Maintenance">General Maintenance</option>
+                        </select>
+                        <button class="clear-all-photos-btn" id="clear-photos-btn" onclick="clearAllPhotos()">🗑️ Clear All Photos</button>
+                    </div>
                 </div>
                 <div id="simple-photos-grid" class="admin-photos-grid">
                     <p>Loading photos...</p>
