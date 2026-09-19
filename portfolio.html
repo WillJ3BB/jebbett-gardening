@@ -16,7 +16,7 @@
     <header>
         <div class="logo">
             <a href="index.html">
-                <img src="images/jebbett-logo.jpeg">
+                <img src="images/jebbett-logo.jpeg" alt="Jebbett Gardening Logo">
             </a>
         </div>
         <button class="hamburger" id="hamburger">
@@ -41,25 +41,68 @@
 
         <section class="page-hero">
             <h1>Our Work</h1>
-            <p>Before and after transformations from recent jobs across East Sussex.</p>
+            <p>Recent garden transformations, precision cuts, and maintenance across East Sussex.</p>
         </section>
 
-        <section class="portfolio-section">
-            <div id="portfolio-grid">
-                <p>Loading portfolio...</p>
+        <!-- Sticky Category Filter Navigation -->
+        <div class="portfolio-filter-wrapper">
+            <div class="portfolio-filter-bar" id="portfolio-filter-bar">
+                <button class="filter-pill active" data-filter="ALL" onclick="filterPortfolio('ALL')">
+                    All Work <span class="pill-count" id="count-all">0</span>
+                </button>
+                <button class="filter-pill" data-filter="Lawn Cuts" onclick="filterPortfolio('Lawn Cuts')">
+                    Lawn Cuts <span class="pill-count" id="count-lawn">0</span>
+                </button>
+                <button class="filter-pill" data-filter="Hedge Trimming" onclick="filterPortfolio('Hedge Trimming')">
+                    Hedge Trimming <span class="pill-count" id="count-hedge">0</span>
+                </button>
+                <button class="filter-pill" data-filter="Garden Clearance" onclick="filterPortfolio('Garden Clearance')">
+                    Garden Clearance <span class="pill-count" id="count-clearance">0</span>
+                </button>
+                <button class="filter-pill" data-filter="Planting & Borders" onclick="filterPortfolio('Planting & Borders')">
+                    Planting &amp; Borders <span class="pill-count" id="count-planting">0</span>
+                </button>
+                <button class="filter-pill" data-filter="General Maintenance" onclick="filterPortfolio('General Maintenance')">
+                    General Maintenance <span class="pill-count" id="count-maintenance">0</span>
+                </button>
+            </div>
+        </div>
+
+        <section class="portfolio-feed-section">
+            <div class="portfolio-gallery-grid" id="portfolio-grid">
+                <div class="portfolio-loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Loading recent transformations...</p>
+                </div>
             </div>
         </section>
 
     </main>
 
-    <!-- Lightbox -->
-    <div id="lightbox" style="display:none;">
-        <div class="lightbox-content">
-            <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-            <button class="lightbox-prev" onclick="lightboxPrev()">&#8592;</button>
-            <img id="lightbox-img" src="" alt="Portfolio image">
-            <button class="lightbox-next" onclick="lightboxNext()">&#8594;</button>
-            <p id="lightbox-counter"></p>
+    <!-- Modern 2026 Lightbox Modal -->
+    <div id="lightbox" class="lightbox-overlay" style="display:none;" onclick="handleLightboxClick(event)">
+        <div class="lightbox-modal">
+            <div class="lightbox-top-bar">
+                <div class="lightbox-info-group">
+                    <span id="lightbox-badge" class="lightbox-pill-badge" style="display:none;"></span>
+                    <span id="lightbox-category" class="lightbox-category-text"></span>
+                </div>
+                <button class="lightbox-close-btn" onclick="closeLightbox()" aria-label="Close viewer">✕</button>
+            </div>
+
+            <div class="lightbox-image-stage">
+                <button class="lightbox-nav-btn btn-prev" onclick="lightboxPrev()" aria-label="Previous photo">&#10094;</button>
+                <img id="lightbox-img" src="" alt="Portfolio Showcase">
+                <button class="lightbox-nav-btn btn-next" onclick="lightboxNext()" aria-label="Next photo">&#10095;</button>
+            </div>
+
+            <div class="lightbox-bottom-bar">
+                <div class="lightbox-meta">
+                    <h3 id="lightbox-title">Garden Transformation</h3>
+                    <p id="lightbox-counter" class="lightbox-counter-text">1 / 1</p>
+                </div>
+                <a id="lightbox-book-btn" href="booking.html" class="btn btn-lightbox-cta">Book This Service &rarr;</a>
+            </div>
         </div>
     </div>
 

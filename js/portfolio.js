@@ -1,4 +1,4 @@
-// ── 5 Dedicated Frames / Headings ──
+// ── 5 Core Services ──
 const CATEGORIES = [
     'Lawn Cuts',
     'Hedge Trimming',
@@ -8,7 +8,7 @@ const CATEGORIES = [
 ];
 
 function normalizeCategory(raw) {
-    if (!raw) return null;
+    if (!raw) return 'General Maintenance';
     const clean = raw.trim().toLowerCase();
     
     if (clean.includes('lawn') || clean.includes('cut') || clean.includes('mow')) return 'Lawn Cuts';
@@ -17,10 +17,9 @@ function normalizeCategory(raw) {
     if (clean.includes('plant') || clean.includes('border') || clean.includes('bed')) return 'Planting & Borders';
     if (clean.includes('maintenance')) return 'General Maintenance';
 
-    return null;
+    return 'General Maintenance';
 }
 
-// Robust extractor for plain strings, stringified JSON, or nested objects
 function extractPhotoDetails(item) {
     if (!item) return null;
 
@@ -58,8 +57,21 @@ function extractPhotoDetails(item) {
     return null;
 }
 
-const frameIndices = {};
-window.categorySlides = {};
+function escapeAttr(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+// Global Store
+let allPortfolioItems = [];
+let activeFilter = 'ALL';
+let currentLightboxList = [];
+let currentLightboxIndex = 0;
 
 async function loadPortfolio() {
     const grid = document.getElementById('portfolio-grid');
@@ -72,43 +84,42 @@ async function loadPortfolio() {
 
     if (error) {
         console.error('Error fetching portfolio:', error);
-        grid.innerHTML = '<p>Unable to load portfolio entries. Please try again later.</p>';
+        grid.innerHTML = `
+            <div class="portfolio-empty-state">
+                <p>Unable to load portfolio. Please refresh or try again later.</p>
+            </div>
+        `;
         return;
     }
 
-    CATEGORIES.forEach(cat => {
-        window.categorySlides[cat] = [];
-        frameIndices[cat] = 0;
-    });
+    allPortfolioItems = [];
 
     if (data && data.length > 0) {
         data.forEach(entry => {
-            const matchedCategory = normalizeCategory(entry.gallery) || normalizeCategory(entry.title);
-            if (!matchedCategory || !window.categorySlides[matchedCategory]) return;
-
-            let itemsToProcess = [];
+            const cat = normalizeCategory(entry.gallery || entry.title);
+            let rawItems = [];
 
             if (Array.isArray(entry.image_urls) && entry.image_urls.length > 0) {
-                itemsToProcess.push(...entry.image_urls);
+                rawItems.push(...entry.image_urls);
             }
             if (entry.after_image_url) {
-                itemsToProcess.push({ url: entry.after_image_url, label: 'After' });
+                rawItems.push({ url: entry.after_image_url, label: 'After' });
             }
             if (entry.before_image_url) {
-                itemsToProcess.push({ url: entry.before_image_url, label: 'Before' });
+                rawItems.push({ url: entry.before_image_url, label: 'Before' });
             }
 
-            itemsToProcess.forEach(raw => {
-                const extracted = extractPhotoDetails(raw);
-                if (extracted && extracted.url) {
-                    const exists = window.categorySlides[matchedCategory].some(s => s.url === extracted.url);
-                    if (!exists) {
-                        window.categorySlides[matchedCategory].push({
-                            url: extracted.url,
-                            label: extracted.label,
-                            title: entry.title || matchedCategory,
-                            location: entry.location || '',
-                            description: entry.description || ''
+            rawItems.forEach((raw, idx) => {
+                const details = extractPhotoDetails(raw);
+                if (details && details.url) {
+                    const alreadyExists = allPortfolioItems.some(i => i.url === details.url);
+                    if (!alreadyExists) {
+                        allPortfolioItems.push({
+                            url: details.url,
+                            label: details.label,
+                            category: cat,
+                            title: entry.title || cat,
+                            sortIndex: idx
                         });
                     }
                 }
@@ -116,146 +127,184 @@ async function loadPortfolio() {
         });
     }
 
-    let html = '<div class="frames-grid">';
+    updateFilterCounts();
+    renderGallery();
+}
 
-    CATEGORIES.forEach((categoryName, idx) => {
-        const slides = window.categorySlides[categoryName] || [];
-        const hasImages = slides.length > 0;
-        const current = hasImages ? slides[0] : null;
+function updateFilterCounts() {
+    const counts = {
+        all: allPortfolioItems.length,
+        'Lawn Cuts': allPortfolioItems.filter(i => i.category === 'Lawn Cuts').length,
+        'Hedge Trimming': allPortfolioItems.filter(i => i.category === 'Hedge Trimming').length,
+        'Garden Clearance': allPortfolioItems.filter(i => i.category === 'Garden Clearance').length,
+        'Planting & Borders': allPortfolioItems.filter(i => i.category === 'Planting & Borders').length,
+        'General Maintenance': allPortfolioItems.filter(i => i.category === 'General Maintenance').length
+    };
 
-        html += `
-            <div class="category-frame" id="frame-${idx}">
-                <div class="frame-header">
-                    <h2>${categoryName}</h2>
-                    ${hasImages ? `<span class="frame-counter" id="counter-${idx}">1 / ${slides.length}</span>` : ''}
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    set('count-all', counts.all);
+    set('count-lawn', counts['Lawn Cuts']);
+    set('count-hedge', counts['Hedge Trimming']);
+    set('count-clearance', counts['Garden Clearance']);
+    set('count-planting', counts['Planting & Borders']);
+    set('count-maintenance', counts['General Maintenance']);
+}
+
+function filterPortfolio(category) {
+    activeFilter = category;
+
+    document.querySelectorAll('.filter-pill').forEach(pill => {
+        if (pill.dataset.filter === category) {
+            pill.classList.add('active');
+        } else {
+            pill.classList.remove('active');
+        }
+    });
+
+    renderGallery();
+}
+window.filterPortfolio = filterPortfolio;
+
+function renderGallery() {
+    const grid = document.getElementById('portfolio-grid');
+    if (!grid) return;
+
+    let items = allPortfolioItems.slice();
+    if (activeFilter !== 'ALL') {
+        items = items.filter(i => i.category === activeFilter);
+    }
+
+    if (items.length === 0) {
+        grid.innerHTML = `
+            <div class="portfolio-empty-state">
+                <span class="empty-icon">🌿</span>
+                <h3>No photos under "${escapeAttr(activeFilter)}" yet</h3>
+                <p>New project photos will be uploaded soon. Check back shortly!</p>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = items.map((item, index) => {
+        const hasLabel = Boolean(item.label && item.label.trim() !== '');
+
+        return `
+            <div class="portfolio-card" onclick="openLightbox(${index})">
+                <div class="portfolio-card-media">
+                    <img src="${escapeAttr(item.url)}" alt="${escapeAttr(item.category)}" loading="lazy">
+                    ${hasLabel ? `<span class="portfolio-badge">${escapeAttr(item.label)}</span>` : ''}
+                    <div class="card-glass-hover">
+                        <span class="hover-view-tag">🔍 Tap to expand</span>
+                    </div>
                 </div>
-
-                <div class="frame-viewport">
-                    ${hasImages ? `
-                        <img id="frame-img-${idx}" 
-                             src="${escapeAttr(current.url)}" 
-                             alt="${escapeAttr(current.title)}" 
-                             onclick="openFrameLightbox('${categoryName}')">
-                        ${current.label ? `<span class="frame-label" id="label-${idx}">${escapeAttr(current.label)}</span>` : `<span class="frame-label" id="label-${idx}" style="display:none;"></span>`}
-                    ` : `
-                        <div class="frame-empty">
-                            <p>No photos uploaded yet.</p>
-                        </div>
-                    `}
-
-                    ${slides.length > 1 ? `
-                        <button class="frame-arrow frame-prev" onclick="shiftFrame('${categoryName}',${idx}, -1)" aria-label="Previous photo">&#10094;</button>
-                        <button class="frame-arrow frame-next" onclick="shiftFrame('${categoryName}',${idx}, 1)" aria-label="Next photo">&#10095;</button>
-                    ` : ''}
-                </div>
-
-                <div class="frame-details">
-                    <h3 id="title-${idx}">${hasImages ? escapeAttr(current.title) : 'Awaiting New Work'}</h3>
-                    <p class="frame-loc" id="loc-${idx}">${hasImages && current.location ? `📍 ${escapeAttr(current.location)}` : ''}</p>
-                    <p class="frame-desc" id="desc-${idx}">${hasImages && current.description ? escapeAttr(current.description) : ''}</p>
+                <div class="portfolio-card-info">
+                    <span class="card-category-pill">${escapeAttr(item.category)}</span>
+                    <h4>${escapeAttr(item.title)}</h4>
                 </div>
             </div>
         `;
-    });
-
-    html += '</div>';
-    grid.innerHTML = html;
+    }).join('');
 }
 
-function escapeAttr(str) {
-    if (!str) return '';
-    return String(str).replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
+// ── Lightbox System ──
+function openLightbox(index) {
+    let items = allPortfolioItems.slice();
+    if (activeFilter !== 'ALL') {
+        items = items.filter(i => i.category === activeFilter);
+    }
 
-function shiftFrame(categoryName, frameIdx, delta) {
-    const slides = window.categorySlides[categoryName];
-    if (!slides || slides.length <= 1) return;
+    if (items.length === 0 || !items[index]) return;
 
-    let currentIndex = frameIndices[categoryName];
-    currentIndex = (currentIndex + delta + slides.length) % slides.length;
-    frameIndices[categoryName] = currentIndex;
+    currentLightboxList = items;
+    currentLightboxIndex = index;
 
-    const slide = slides[currentIndex];
-    const img = document.getElementById(`frame-img-${frameIdx}`);
-
-    img.style.opacity = '0.3';
-    setTimeout(() => {
-        img.src = slide.url;
-        img.alt = slide.title;
-        img.style.opacity = '1';
-
-        const counterEl = document.getElementById(`counter-${frameIdx}`);
-        if (counterEl) counterEl.textContent = `${currentIndex + 1} / ${slides.length}`;
-
-        const labelEl = document.getElementById(`label-${frameIdx}`);
-        if (labelEl) {
-            if (slide.label) {
-                labelEl.textContent = slide.label;
-                labelEl.style.display = 'block';
-            } else {
-                labelEl.style.display = 'none';
-            }
-        }
-
-        const titleEl = document.getElementById(`title-${frameIdx}`);
-        if (titleEl) titleEl.textContent = slide.title;
-
-        const locEl = document.getElementById(`loc-${frameIdx}`);
-        if (locEl) locEl.textContent = slide.location ? `📍 ${slide.location}` : '';
-
-        const descEl = document.getElementById(`desc-${frameIdx}`);
-        if (descEl) descEl.textContent = slide.description || '';
-    }, 120);
-}
-
-// ── Lightbox ──
-let activeLightboxSlides = [];
-let activeLightboxIndex = 0;
-
-function openFrameLightbox(categoryName) {
-    const slides = window.categorySlides[categoryName];
-    if (!slides || slides.length === 0) return;
-
-    activeLightboxSlides = slides;
-    activeLightboxIndex = frameIndices[categoryName] || 0;
-
-    const lightbox = document.getElementById('lightbox');
-    if (lightbox) {
-        lightbox.style.display = 'flex';
+    const modal = document.getElementById('lightbox');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
         syncLightbox();
     }
 }
+window.openLightbox = openLightbox;
 
 function syncLightbox() {
-    const slide = activeLightboxSlides[activeLightboxIndex];
+    const item = currentLightboxList[currentLightboxIndex];
+    if (!item) return;
+
     const img = document.getElementById('lightbox-img');
-    if (img) img.src = slide.url;
+    const badge = document.getElementById('lightbox-badge');
+    const category = document.getElementById('lightbox-category');
+    const title = document.getElementById('lightbox-title');
     const counter = document.getElementById('lightbox-counter');
-    if (counter) counter.textContent = `${activeLightboxIndex + 1} / ${activeLightboxSlides.length}`;
+    const bookBtn = document.getElementById('lightbox-book-btn');
+
+    if (img) {
+        img.style.opacity = '0.3';
+        img.src = item.url;
+        img.onload = () => { img.style.opacity = '1'; };
+    }
+
+    if (badge) {
+        if (item.label && item.label.trim() !== '') {
+            badge.textContent = item.label;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    if (category) category.textContent = item.category;
+    if (title) title.textContent = item.title || item.category;
+    if (counter) counter.textContent = `${currentLightboxIndex + 1} of ${currentLightboxList.length}`;
+
+    if (bookBtn) {
+        const encodedService = encodeURIComponent(item.category.toLowerCase().replace(/ & /g, '-').replace(/\s+/g, '-'));
+        bookBtn.href = `booking.html?service=${encodedService}`;
+    }
 }
 
 function lightboxPrev() {
-    if (activeLightboxSlides.length <= 1) return;
-    activeLightboxIndex = (activeLightboxIndex - 1 + activeLightboxSlides.length) % activeLightboxSlides.length;
+    if (currentLightboxList.length <= 1) return;
+    currentLightboxIndex = (currentLightboxIndex - 1 + currentLightboxList.length) % currentLightboxList.length;
     syncLightbox();
 }
+window.lightboxPrev = lightboxPrev;
 
 function lightboxNext() {
-    if (activeLightboxSlides.length <= 1) return;
-    activeLightboxIndex = (activeLightboxIndex + 1) % activeLightboxSlides.length;
+    if (currentLightboxList.length <= 1) return;
+    currentLightboxIndex = (currentLightboxIndex + 1) % currentLightboxList.length;
     syncLightbox();
 }
+window.lightboxNext = lightboxNext;
 
 function closeLightbox() {
-    const lightbox = document.getElementById('lightbox');
-    if (lightbox) lightbox.style.display = 'none';
+    const modal = document.getElementById('lightbox');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
 }
+window.closeLightbox = closeLightbox;
 
-const lightboxEl = document.getElementById('lightbox');
-if (lightboxEl) {
-    lightboxEl.addEventListener('click', (e) => {
-        if (e.target === lightboxEl) closeLightbox();
-    });
+function handleLightboxClick(e) {
+    if (e.target === document.getElementById('lightbox')) {
+        closeLightbox();
+    }
 }
+window.handleLightboxClick = handleLightboxClick;
+
+// Keyboard navigation
+window.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('lightbox');
+    if (!modal || modal.style.display === 'none') return;
+
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') lightboxPrev();
+    if (e.key === 'ArrowRight') lightboxNext();
+});
 
 loadPortfolio();
