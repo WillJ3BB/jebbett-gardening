@@ -12,7 +12,7 @@ function escapeHtml(text) {
 // ── Strict Admin Access Control ──
 // Add your authorized admin email(s) here
 const ADMIN_EMAILS = [
-    'jackjebbett@hotmail.co.uk' 
+    'jack.jebbett@hotmail.co.uk' 
 ];
 
 async function checkAdmin() {
