@@ -452,7 +452,7 @@ async function loadCustomers() {
 }
 
 // ══════════════════════════════════════════════════════════
-// ── Unlimited Portfolio Uploader & Badge Manager ──
+// ── Unlimited Portfolio Uploader & Manager ──
 // ══════════════════════════════════════════════════════════
 let selectedUploadFiles = []
 let allPortfolioRecords = []
@@ -476,6 +476,43 @@ function getChosenLabel() {
         return (document.getElementById('badge-custom-text')?.value || '').trim()
     }
     return preset
+}
+
+function parseAdminPhotoItem(item) {
+    if (!item) return null
+
+    if (typeof item === 'object' && item !== null) {
+        if (item.url && typeof item.url === 'string') {
+            return { url: item.url.trim(), label: item.label || '' }
+        }
+    }
+
+    if (typeof item === 'string') {
+        const trimmed = item.trim()
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+            try {
+                const parsed = JSON.parse(trimmed)
+                if (parsed && parsed.url) {
+                    return { url: String(parsed.url).trim(), label: parsed.label || '' }
+                }
+            } catch (e) {
+                const urlMatch = trimmed.match(/"url"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/)
+                const labelMatch = trimmed.match(/"label"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/)
+                if (urlMatch && urlMatch[1]) {
+                    return {
+                        url: urlMatch[1].replace(/\\/g, ''),
+                        label: labelMatch && labelMatch[1] ? labelMatch[1] : ''
+                    }
+                }
+            }
+        }
+
+        if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return { url: trimmed, label: '' }
+        }
+    }
+
+    return null
 }
 
 const fileInput = document.getElementById('portfolio-files')
@@ -539,10 +576,11 @@ if (uploadBtn) {
                     .from('Portfolio')
                     .getPublicUrl(path)
 
-                uploadedItems.push({
+                // Store clean JSON string representation
+                uploadedItems.push(JSON.stringify({
                     url: urlData.publicUrl,
                     label: chosenLabel
-                })
+                }))
 
                 const percent = Math.round(((i + 1) / selectedUploadFiles.length) * 100)
                 progressFill.style.width = `${percent}%`
@@ -612,22 +650,25 @@ function filterEntriesList() {
     allPortfolioRecords.forEach(record => {
         if (filter !== 'ALL' && record.gallery !== filter) return
 
-        let imgs = []
+        let rawItems = []
         if (Array.isArray(record.image_urls) && record.image_urls.length > 0) {
-            imgs = record.image_urls
-        } else {
-            imgs = [record.after_image_url, record.before_image_url].filter(Boolean)
+            rawItems.push(...record.image_urls)
+        }
+        if (record.after_image_url) {
+            rawItems.push({ url: record.after_image_url, label: 'After' })
+        }
+        if (record.before_image_url) {
+            rawItems.push({ url: record.before_image_url, label: 'Before' })
         }
 
-        imgs.forEach((item) => {
-            const url = typeof item === 'object' && item !== null ? item.url : item
-            const label = typeof item === 'object' && item !== null ? (item.label || '') : ''
-            if (url) {
+        rawItems.forEach((item) => {
+            const parsed = parseAdminPhotoItem(item)
+            if (parsed && parsed.url) {
                 displayPhotos.push({
                     recordId: record.id,
                     gallery: record.gallery || 'General Maintenance',
-                    url: url,
-                    label: label
+                    url: parsed.url,
+                    label: parsed.label
                 })
             }
         })
@@ -665,10 +706,13 @@ async function deleteIndividualPhoto(recordId, encodedUrl) {
     const record = allPortfolioRecords.find(r => r.id == recordId)
     if (!record) return
 
-    const currentImages = (record.image_urls || []).filter(u => {
-        const itemUrl = typeof u === 'object' && u !== null ? u.url : u
-        return itemUrl !== targetUrl
-    })
+    let currentImages = []
+    if (Array.isArray(record.image_urls)) {
+        currentImages = record.image_urls.filter(u => {
+            const parsed = parseAdminPhotoItem(u)
+            return parsed && parsed.url !== targetUrl
+        })
+    }
 
     if (currentImages.length === 0) {
         await supabaseClient.from('portfolio').delete().eq('id', recordId)
@@ -696,14 +740,17 @@ window.clearAllPhotos = async function() {
     try {
         const targetRecords = allPortfolioRecords.filter(record => filter === 'ALL' || record.gallery === filter)
 
-        // 1. Gather all file storage paths to delete from Supabase Storage
         const pathsToDelete = []
         targetRecords.forEach(record => {
-            const imgs = Array.isArray(record.image_urls) ? record.image_urls : [record.after_image_url, record.before_image_url].filter(Boolean)
-            imgs.forEach(item => {
-                const url = typeof item === 'object' && item !== null ? item.url : item
-                if (url) {
-                    const match = url.match(/\/Portfolio\/(.+)$/)
+            let rawItems = []
+            if (Array.isArray(record.image_urls)) rawItems.push(...record.image_urls)
+            if (record.after_image_url) rawItems.push(record.after_image_url)
+            if (record.before_image_url) rawItems.push(record.before_image_url)
+
+            rawItems.forEach(item => {
+                const parsed = parseAdminPhotoItem(item)
+                if (parsed && parsed.url) {
+                    const match = parsed.url.match(/\/Portfolio\/(.+)$/)
                     if (match && match[1]) pathsToDelete.push(match[1])
                 }
             })
@@ -713,7 +760,6 @@ window.clearAllPhotos = async function() {
             await supabaseClient.storage.from('Portfolio').remove(pathsToDelete)
         }
 
-        // 2. Delete the database records
         const recordIds = targetRecords.map(r => r.id)
         if (recordIds.length > 0) {
             const { error: deleteDbError } = await supabaseClient

@@ -20,28 +20,40 @@ function normalizeCategory(raw) {
     return null;
 }
 
-// Safely extracts a clean URL and label from ANY format (string, JSON string, or object)
-function parsePhotoItem(item) {
+// Robust extractor for plain strings, stringified JSON, or nested objects
+function extractPhotoDetails(item) {
     if (!item) return null;
 
-    if (typeof item === 'string' && item.trim().startsWith('{') && item.includes('url')) {
-        try {
-            item = JSON.parse(item);
-        } catch (e) {}
-    }
-
     if (typeof item === 'object' && item !== null) {
-        return {
-            url: item.url || '',
-            label: item.label || ''
-        };
+        if (item.url && typeof item.url === 'string') {
+            return { url: item.url.trim(), label: item.label || '' };
+        }
     }
 
     if (typeof item === 'string') {
-        return {
-            url: item,
-            label: ''
-        };
+        const trimmed = item.trim();
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (parsed && parsed.url) {
+                    return { url: String(parsed.url).trim(), label: parsed.label || '' };
+                }
+            } catch (e) {
+                // Fallback regex if JSON was malformed by escaping
+                const urlMatch = trimmed.match(/"url"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
+                const labelMatch = trimmed.match(/"label"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
+                if (urlMatch && urlMatch[1]) {
+                    return {
+                        url: urlMatch[1].replace(/\\/g, ''),
+                        label: labelMatch && labelMatch[1] ? labelMatch[1] : ''
+                    };
+                }
+            }
+        }
+
+        if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return { url: trimmed, label: '' };
+        }
     }
 
     return null;
@@ -52,6 +64,7 @@ window.categorySlides = {};
 
 async function loadPortfolio() {
     const grid = document.getElementById('portfolio-grid');
+    if (!grid) return;
 
     const { data, error } = await supabaseClient
         .from('portfolio')
@@ -74,30 +87,26 @@ async function loadPortfolio() {
             const matchedCategory = normalizeCategory(entry.gallery) || normalizeCategory(entry.title);
             if (!matchedCategory || !window.categorySlides[matchedCategory]) return;
 
-            let rawItems = [];
+            let itemsToProcess = [];
 
-            // Check array of image_urls
             if (Array.isArray(entry.image_urls) && entry.image_urls.length > 0) {
-                rawItems.push(...entry.image_urls);
+                itemsToProcess.push(...entry.image_urls);
             }
-
-            // Check after_image_url and before_image_url
             if (entry.after_image_url) {
-                rawItems.push({ url: entry.after_image_url, label: 'After' });
+                itemsToProcess.push({ url: entry.after_image_url, label: 'After' });
             }
             if (entry.before_image_url) {
-                rawItems.push({ url: entry.before_image_url, label: 'Before' });
+                itemsToProcess.push({ url: entry.before_image_url, label: 'Before' });
             }
 
-            rawItems.forEach((rawItem) => {
-                const parsed = parsePhotoItem(rawItem);
-                if (parsed && parsed.url && typeof parsed.url === 'string' && parsed.url.startsWith('http')) {
-                    // Prevent duplicates
-                    const alreadyExists = window.categorySlides[matchedCategory].some(s => s.url === parsed.url);
-                    if (!alreadyExists) {
+            itemsToProcess.forEach(raw => {
+                const extracted = extractPhotoDetails(raw);
+                if (extracted && extracted.url) {
+                    const exists = window.categorySlides[matchedCategory].some(s => s.url === extracted.url);
+                    if (!exists) {
                         window.categorySlides[matchedCategory].push({
-                            url: parsed.url,
-                            label: parsed.label,
+                            url: extracted.url,
+                            label: extracted.label,
                             title: entry.title || matchedCategory,
                             location: entry.location || '',
                             description: entry.description || ''
@@ -212,13 +221,16 @@ function openFrameLightbox(categoryName) {
     activeLightboxIndex = frameIndices[categoryName] || 0;
 
     const lightbox = document.getElementById('lightbox');
-    lightbox.style.display = 'flex';
-    syncLightbox();
+    if (lightbox) {
+        lightbox.style.display = 'flex';
+        syncLightbox();
+    }
 }
 
 function syncLightbox() {
     const slide = activeLightboxSlides[activeLightboxIndex];
-    document.getElementById('lightbox-img').src = slide.url;
+    const img = document.getElementById('lightbox-img');
+    if (img) img.src = slide.url;
     const counter = document.getElementById('lightbox-counter');
     if (counter) counter.textContent = `${activeLightboxIndex + 1} / ${activeLightboxSlides.length}`;
 }
@@ -236,11 +248,15 @@ function lightboxNext() {
 }
 
 function closeLightbox() {
-    document.getElementById('lightbox').style.display = 'none';
+    const lightbox = document.getElementById('lightbox');
+    if (lightbox) lightbox.style.display = 'none';
 }
 
-document.getElementById('lightbox').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('lightbox')) closeLightbox();
-});
+const lightboxEl = document.getElementById('lightbox');
+if (lightboxEl) {
+    lightboxEl.addEventListener('click', (e) => {
+        if (e.target === lightboxEl) closeLightbox();
+    });
+}
 
 loadPortfolio();
