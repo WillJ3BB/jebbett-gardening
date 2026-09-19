@@ -1,11 +1,40 @@
-// ── Check admin is logged in ──
-async function checkAdmin() {
-    const { data: { session } } = await supabaseClient.auth.getSession()
-    if (!session) {
-        window.location.href = 'login.html'
-    }
+// ── XSS Sanitization Helper ──
+function escapeHtml(text) {
+    if (!text) return ''
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
 }
-checkAdmin()
+
+// ── Strict Admin Access Control ──
+// Add your authorized admin email(s) here
+const ADMIN_EMAILS = [
+    'jackjebbett@gmail.com' 
+];
+
+async function checkAdmin() {
+    const { data: { session }, error } = await supabaseClient.auth.getSession()
+
+    if (error || !session) {
+        window.location.href = 'login.html?redirect=admin.html'
+        return false
+    }
+
+    const user = session.user
+    const isExplicitAdmin = ADMIN_EMAILS.some(e => e.toLowerCase() === (user.email || '').toLowerCase())
+    const hasAdminRole = user.app_metadata?.role === 'admin' || user.user_metadata?.is_admin === true
+
+    if (!isExplicitAdmin && !hasAdminRole) {
+        alert('Access denied. Administrator privileges required.')
+        window.location.href = 'account.html'
+        return false
+    }
+
+    return true
+}
 
 // ── Weekly Calendar ──
 let calendarWeekStart = getMonday(new Date())
@@ -39,47 +68,55 @@ async function loadWeekCalendar() {
     const label = document.getElementById('week-label')
     const grid = document.getElementById('week-calendar')
 
-    label.textContent = `${weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} — ${weekEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    if (label) {
+        label.textContent = `${weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} — ${weekEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    }
 
-    grid.innerHTML = days.map((day, i) => {
-        const date = new Date(weekStart)
-        date.setDate(date.getDate() + i)
-        const dateStr = date.toISOString().split('T')[0]
-        const dayBookings = data ? data.filter(b => b.preferred_date === dateStr) : []
+    if (grid) {
+        grid.innerHTML = days.map((day, i) => {
+            const date = new Date(weekStart)
+            date.setDate(date.getDate() + i)
+            const dateStr = date.toISOString().split('T')[0]
+            const dayBookings = data ? data.filter(b => b.preferred_date === dateStr) : []
 
-        return `
-            <div class="week-day-column">
-                <div class="week-day-header">
-                    <span class="week-day-name">${day}</span>
-                    <span class="week-day-date">${date.getDate()}</span>
+            return `
+                <div class="week-day-column">
+                    <div class="week-day-header">
+                        <span class="week-day-name">${day}</span>
+                        <span class="week-day-date">${date.getDate()}</span>
+                    </div>
+                    <div class="week-day-bookings">
+                        ${dayBookings.length === 0 ? '<p class="no-bookings-day">—</p>' : dayBookings.map(b => `
+                            <div class="week-booking-item ${escapeHtml(b.status)}">
+                                <span class="week-booking-name">${escapeHtml(b.full_name)}</span>
+                                <span class="week-booking-service">${escapeHtml((b.service_type || '').replace(/-/g, ' '))}</span>
+                                <span class="week-booking-time">${escapeHtml(b.preferred_time || 'Flexible')}</span>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
-                <div class="week-day-bookings">
-                    ${dayBookings.length === 0 ? '<p class="no-bookings-day">—</p>' : dayBookings.map(b => `
-                        <div class="week-booking-item ${b.status}">
-                            <span class="week-booking-name">${b.full_name}</span>
-                            <span class="week-booking-service">${b.service_type.replace(/-/g, ' ')}</span>
-                            <span class="week-booking-time">${b.preferred_time || 'Flexible'}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `
-    }).join('')
+            `
+        }).join('')
+    }
 }
 
-document.getElementById('prev-week').addEventListener('click', () => {
-    calendarWeekStart.setDate(calendarWeekStart.getDate() - 7)
-    loadWeekCalendar()
-})
+const prevWeekBtn = document.getElementById('prev-week')
+if (prevWeekBtn) {
+    prevWeekBtn.addEventListener('click', () => {
+        calendarWeekStart.setDate(calendarWeekStart.getDate() - 7)
+        loadWeekCalendar()
+    })
+}
 
-document.getElementById('next-week').addEventListener('click', () => {
-    calendarWeekStart.setDate(calendarWeekStart.getDate() + 7)
-    loadWeekCalendar()
-})
+const nextWeekBtn = document.getElementById('next-week')
+if (nextWeekBtn) {
+    nextWeekBtn.addEventListener('click', () => {
+        calendarWeekStart.setDate(calendarWeekStart.getDate() + 7)
+        loadWeekCalendar()
+    })
+}
 
-loadWeekCalendar()
-
-// ── Load bookings ──
+// ── Load Bookings ──
 let currentFilter = 'pending'
 
 async function loadBookings() {
@@ -94,44 +131,58 @@ async function loadBookings() {
 
     const { data, error } = await query
     const list = document.getElementById('bookings-list')
+    if (!list) return
 
     if (error || !data || data.length === 0) {
         list.innerHTML = '<p>No bookings found.</p>'
         return
     }
 
-    list.innerHTML = data.map(booking => `
-        <div class="admin-booking-card ${booking.status}">
-            <div class="admin-booking-header">
-                <h3>${booking.service_type.replace(/-/g, ' ')}</h3>
-                <span class="booking-status ${booking.status}">${booking.status}</span>
-            </div>
-            <div class="admin-booking-details">
-                <p><strong>Name:</strong> ${booking.full_name}</p>
-                <p><strong>Email:</strong> <a href="mailto:${booking.email}">${booking.email}</a></p>
-                <p><strong>Phone:</strong> ${booking.phone || 'Not provided'}</p>
-                <p><strong>Date:</strong> ${new Date(booking.preferred_date).toLocaleDateString('en-GB')}</p>
-                <p><strong>Time:</strong> ${booking.preferred_time || 'Flexible'}</p>
-                <p><strong>Address:</strong> ${booking.address || 'Not provided'}</p>
-                ${booking.notes ? `<p><strong>Customer Notes:</strong> ${booking.notes}</p>` : ''}
-                <p><strong>Submitted:</strong> ${new Date(booking.created_at).toLocaleDateString('en-GB')}</p>
-            </div>
-            <div class="admin-notes-section">
-                <label><strong>Internal Notes</strong></label>
-                <textarea class="admin-notes-input" id="notes-${booking.id}" rows="2" placeholder="Private notes about this job...">${booking.admin_notes || ''}</textarea>
-                <button class="save-notes-btn" onclick="saveNotes('${booking.id}')">Save Note</button>
-            </div>
-            <div class="admin-booking-actions">
-                <button onclick="updateBookingStatus('${booking.id}', 'confirmed')" class="status-btn confirm-btn" ${booking.status === 'confirmed' ? 'disabled' : ''}>Confirm</button>
-                <button onclick="updateBookingStatus('${booking.id}', 'completed')" class="status-btn complete-btn" ${booking.status === 'completed' ? 'disabled' : ''}>Complete</button>
-                <button onclick="updateBookingStatus('${booking.id}', 'cancelled')" class="status-btn cancel-btn" ${booking.status === 'cancelled' ? 'disabled' : ''}>Cancel</button>
-            </div>
-        </div>
-    `).join('')
-}
-loadBookings()
+    list.innerHTML = data.map(booking => {
+        const id = escapeHtml(booking.id)
+        const status = escapeHtml(booking.status || 'pending')
+        const service = escapeHtml((booking.service_type || '').replace(/-/g, ' '))
+        const name = escapeHtml(booking.full_name)
+        const email = escapeHtml(booking.email)
+        const phone = escapeHtml(booking.phone || 'Not provided')
+        const date = escapeHtml(new Date(booking.preferred_date).toLocaleDateString('en-GB'))
+        const time = escapeHtml(booking.preferred_time || 'Flexible')
+        const address = escapeHtml(booking.address || 'Not provided')
+        const notes = escapeHtml(booking.notes || '')
+        const submitted = escapeHtml(new Date(booking.created_at).toLocaleDateString('en-GB'))
+        const adminNotes = escapeHtml(booking.admin_notes || '')
 
-// ── Filter bookings ──
+        return `
+            <div class="admin-booking-card ${status}">
+                <div class="admin-booking-header">
+                    <h3>${service}</h3>
+                    <span class="booking-status ${status}">${status}</span>
+                </div>
+                <div class="admin-booking-details">
+                    <p><strong>Name:</strong> ${name}</p>
+                    <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+                    <p><strong>Phone:</strong> ${phone}</p>
+                    <p><strong>Date:</strong> ${date}</p>
+                    <p><strong>Time:</strong> ${time}</p>
+                    <p><strong>Address:</strong> ${address}</p>
+                    ${notes ? `<p><strong>Customer Notes:</strong> ${notes}</p>` : ''}
+                    <p><strong>Submitted:</strong> ${submitted}</p>
+                </div>
+                <div class="admin-notes-section">
+                    <label><strong>Internal Notes</strong></label>
+                    <textarea class="admin-notes-input" id="notes-${id}" rows="2" placeholder="Private notes about this job...">${adminNotes}</textarea>
+                    <button class="save-notes-btn" onclick="saveNotes('${id}')">Save Note</button>
+                </div>
+                <div class="admin-booking-actions">
+                    <button onclick="updateBookingStatus('${id}', 'confirmed')" class="status-btn confirm-btn" ${status === 'confirmed' ? 'disabled' : ''}>Confirm</button>
+                    <button onclick="updateBookingStatus('${id}', 'completed')" class="status-btn complete-btn" ${status === 'completed' ? 'disabled' : ''}>Complete</button>
+                    <button onclick="updateBookingStatus('${id}', 'cancelled')" class="status-btn cancel-btn" ${status === 'cancelled' ? 'disabled' : ''}>Cancel</button>
+                </div>
+            </div>
+        `
+    }).join('')
+}
+
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'))
@@ -141,7 +192,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     })
 })
 
-// ── Update booking status ──
+// ── Update Booking Status ──
 async function updateBookingStatus(id, status) {
     const { error } = await supabaseClient
         .from('bookings')
@@ -154,11 +205,14 @@ async function updateBookingStatus(id, status) {
     }
 
     loadBookings()
+    loadWeekCalendar()
 }
 
-// ── Save internal notes ──
+// ── Save Internal Notes ──
 async function saveNotes(id) {
-    const notes = document.getElementById(`notes-${id}`).value
+    const textarea = document.getElementById(`notes-${id}`)
+    if (!textarea) return
+    const notes = textarea.value
 
     const { error } = await supabaseClient
         .from('bookings')
@@ -173,18 +227,19 @@ async function saveNotes(id) {
     const saveBtn = document.querySelector(`[onclick="saveNotes('${id}')"]`)
     if (saveBtn) {
         saveBtn.textContent = 'Saved!'
-        setTimeout(() => saveBtn.textContent = 'Save Note', 2000)
+        setTimeout(() => { saveBtn.textContent = 'Save Note' }, 2000)
     }
 }
 
-// ── Load customer list ──
+// ── Load Customer List ──
 async function loadCustomers() {
+    const list = document.getElementById('customers-list')
+    if (!list) return
+
     const { data, error } = await supabaseClient
         .from('customer_summary')
         .select('*')
         .order('created_at', { ascending: false })
-
-    const list = document.getElementById('customers-list')
 
     if (error || !data || data.length === 0) {
         list.innerHTML = '<p>No customers yet.</p>'
@@ -204,17 +259,16 @@ async function loadCustomers() {
             <tbody>
                 ${data.map(customer => `
                     <tr>
-                        <td>${customer.full_name || 'Not provided'}</td>
-                        <td><a href="mailto:${customer.email}">${customer.email}</a></td>
-                        <td>${customer.booking_count}</td>
-                        <td>${new Date(customer.created_at).toLocaleDateString('en-GB')}</td>
+                        <td>${escapeHtml(customer.full_name || 'Not provided')}</td>
+                        <td><a href="mailto:${escapeHtml(customer.email)}">${escapeHtml(customer.email)}</a></td>
+                        <td>${escapeHtml(customer.booking_count)}</td>
+                        <td>${escapeHtml(new Date(customer.created_at).toLocaleDateString('en-GB'))}</td>
                     </tr>
                 `).join('')}
             </tbody>
         </table>
     `
 }
-loadCustomers()
 
 // ══════════════════════════════════════════════════════════
 // ── Unlimited Simple Portfolio Uploader & Manager ──
@@ -222,7 +276,6 @@ loadCustomers()
 let selectedUploadFiles = []
 let allPortfolioRecords = []
 
-// File preview
 const fileInput = document.getElementById('portfolio-files')
 const previewContainer = document.getElementById('upload-preview')
 
@@ -246,7 +299,6 @@ if (fileInput) {
     })
 }
 
-// Handle bulk image upload
 const uploadBtn = document.getElementById('simple-upload-btn')
 if (uploadBtn) {
     uploadBtn.addEventListener('click', async () => {
@@ -291,7 +343,6 @@ if (uploadBtn) {
                 status.textContent = `Uploaded ${i + 1} of ${selectedUploadFiles.length}...`
             }
 
-            // Save records directly under the selected category frame
             const { error: insertError } = await supabaseClient
                 .from('portfolio')
                 .insert([{
@@ -320,7 +371,6 @@ if (uploadBtn) {
     })
 }
 
-// Load uploaded entries into management grid
 async function loadSimpleEntries() {
     const grid = document.getElementById('simple-photos-grid')
     if (!grid) return
@@ -342,8 +392,10 @@ async function loadSimpleEntries() {
 function filterEntriesList() {
     const grid = document.getElementById('simple-photos-grid')
     const totalCount = document.getElementById('total-photos-count')
-    const filter = document.getElementById('filter-manage-category').value
+    const filterSelect = document.getElementById('filter-manage-category')
+    if (!grid || !filterSelect) return
 
+    const filter = filterSelect.value
     let displayPhotos = []
 
     allPortfolioRecords.forEach(record => {
@@ -371,20 +423,22 @@ function filterEntriesList() {
 
     grid.innerHTML = displayPhotos.map(item => `
         <div class="admin-photo-card">
-            <img src="${item.url}" alt="Uploaded photo">
+            <img src="${escapeHtml(item.url)}" alt="Uploaded photo">
             <div class="admin-photo-overlay">
-                <span class="photo-category-pill">${item.gallery}</span>
-                <button class="delete-photo-btn" onclick="deleteIndividualPhoto('${item.recordId}', '${item.url}')" title="Delete photo">✕</button>
+                <span class="photo-category-pill">${escapeHtml(item.gallery)}</span>
+                <button class="delete-photo-btn" onclick="deleteIndividualPhoto('${escapeHtml(item.recordId)}', '${encodeURIComponent(item.url)}')" title="Delete photo">✕</button>
             </div>
         </div>
     `).join('')
 }
 
-// Delete an image from storage & database
-async function deleteIndividualPhoto(recordId, targetUrl) {
+async function deleteIndividualPhoto(recordId, encodedUrl) {
+    const targetUrl = decodeURIComponent(encodedUrl)
     if (!confirm('Are you sure you want to delete this photo?')) return
 
-    const path = targetUrl.split('/Portfolio/')[1]
+    const match = targetUrl.match(/\/Portfolio\/(.+)$/)
+    const path = match ? match[1] : null
+
     if (path) {
         await supabaseClient.storage.from('Portfolio').remove([path])
     }
@@ -403,4 +457,12 @@ async function deleteIndividualPhoto(recordId, targetUrl) {
     loadSimpleEntries()
 }
 
-loadSimpleEntries()
+// ── Application Initialization ──
+checkAdmin().then(isAdmin => {
+    if (isAdmin) {
+        loadWeekCalendar()
+        loadBookings()
+        loadCustomers()
+        loadSimpleEntries()
+    }
+})
