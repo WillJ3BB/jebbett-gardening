@@ -2776,3 +2776,14 @@ footer {
     z-index: 99999;
     display: none;
 }
+
+
+
+
+/* Ensure smooth drag-drop target resolution */
+.admin-photo-card * {
+    pointer-events: none;
+}
+.admin-photo-card .delete-photo-btn {
+    pointer-events: auto;
+}

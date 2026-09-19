@@ -651,7 +651,7 @@ async function loadSimpleEntries() {
 }
 
 // Drag State
-let draggedRecordId = null
+let draggedCategory = null
 let draggedIndex = null
 
 function filterEntriesList() {
@@ -668,9 +668,14 @@ function filterEntriesList() {
         clearBtn.textContent = filter === 'ALL' ? '🗑️ Clear All Photos' : `🗑️ Clear ${filter} Photos`
     }
 
+    // Process all records by category
+    const categoryMap = {}
+
     allPortfolioRecords.forEach(record => {
         const cat = record.gallery || record.title || 'General Maintenance'
         if (filter !== 'ALL' && cat !== filter) return
+
+        if (!categoryMap[cat]) categoryMap[cat] = []
 
         let rawItems = []
         if (Array.isArray(record.image_urls) && record.image_urls.length > 0) {
@@ -679,18 +684,29 @@ function filterEntriesList() {
         if (record.after_image_url) rawItems.push({ url: record.after_image_url, label: 'After' })
         if (record.before_image_url) rawItems.push({ url: record.before_image_url, label: 'Before' })
 
-        rawItems.forEach((item, index) => {
+        rawItems.forEach(item => {
             const parsed = parseAdminPhotoItem(item)
             if (parsed && parsed.url && typeof parsed.url === 'string' && parsed.url.startsWith('http')) {
-                displayPhotos.push({
+                categoryMap[cat].push({
                     recordId: record.id,
-                    gallery: cat,
                     url: parsed.url,
                     label: parsed.label,
-                    arrayIndex: index,
-                    totalInRecord: rawItems.length
+                    rawItem: item
                 })
             }
+        })
+    })
+
+    Object.keys(categoryMap).forEach(cat => {
+        categoryMap[cat].forEach((photo, idx) => {
+            displayPhotos.push({
+                category: cat,
+                recordId: photo.recordId,
+                url: photo.url,
+                label: photo.label,
+                arrayIndex: idx,
+                totalInCategory: categoryMap[cat].length
+            })
         })
     })
 
@@ -707,13 +723,8 @@ function filterEntriesList() {
         return `
             <div class="admin-photo-card draggable" 
                  draggable="true" 
-                 data-record-id="${escapeHtml(item.recordId)}" 
-                 data-index="${item.arrayIndex}"
-                 ondragstart="handleCardDragStart(event)"
-                 ondragover="handleCardDragOver(event)"
-                 ondragleave="handleCardDragLeave(event)"
-                 ondrop="handleCardDrop(event)"
-                 ondragend="handleCardDragEnd(event)">
+                 data-category="${escapeHtml(item.category)}" 
+                 data-index="${item.arrayIndex}">
                 
                 <div class="drag-grip-bar">
                     <span class="drag-handle-badge">
@@ -725,85 +736,111 @@ function filterEntriesList() {
                 <img src="${escapeHtml(item.url)}" alt="Uploaded photo" draggable="false">
 
                 <div class="admin-photo-overlay">
-                    <span class="photo-category-pill">${escapeHtml(item.gallery)}${item.label ? ` • ${escapeHtml(item.label)}` : ''}</span>
+                    <span class="photo-category-pill">${escapeHtml(item.category)}${item.label ? ` • ${escapeHtml(item.label)}` : ''}</span>
                     <button class="delete-photo-btn" onclick="deleteIndividualPhoto('${escapeHtml(item.recordId)}', '${encodeURIComponent(item.url)}')" title="Delete photo">✕</button>
                 </div>
             </div>
         `
     }).join('')
+
+    attachDragListeners()
 }
 
-// ── HTML5 Drag & Drop Shuffle Handlers ──
-window.handleCardDragStart = function(e) {
-    const card = e.currentTarget
-    draggedRecordId = card.getAttribute('data-record-id')
-    draggedIndex = parseInt(card.getAttribute('data-index'), 10)
-    card.classList.add('dragging')
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', draggedIndex)
-}
+// ── Native Drag & Drop Event Delegation ──
+function attachDragListeners() {
+    const cards = document.querySelectorAll('.admin-photo-card.draggable')
 
-window.handleCardDragOver = function(e) {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    const card = e.currentTarget
-    if (!card.classList.contains('dragging')) {
-        card.classList.add('drag-over')
-    }
-}
+    cards.forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+            const targetCard = e.target.closest('.admin-photo-card')
+            if (!targetCard) return
+            draggedCategory = targetCard.getAttribute('data-category')
+            draggedIndex = parseInt(targetCard.getAttribute('data-index'), 10)
+            targetCard.classList.add('dragging')
+            e.dataTransfer.effectAllowed = 'move'
+            e.dataTransfer.setData('text/plain', draggedIndex)
+        })
 
-window.handleCardDragLeave = function(e) {
-    e.currentTarget.classList.remove('drag-over')
-}
+        card.addEventListener('dragover', (e) => {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'move'
+            const overCard = e.target.closest('.admin-photo-card')
+            if (overCard && !overCard.classList.contains('dragging')) {
+                overCard.classList.add('drag-over')
+            }
+        })
 
-window.handleCardDrop = async function(e) {
-    e.preventDefault()
-    const targetCard = e.currentTarget
-    targetCard.classList.remove('drag-over')
+        card.addEventListener('dragleave', (e) => {
+            const overCard = e.target.closest('.admin-photo-card')
+            if (overCard) {
+                overCard.classList.remove('drag-over')
+            }
+        })
 
-    const targetRecordId = targetCard.getAttribute('data-record-id')
-    const targetIndex = parseInt(targetCard.getAttribute('data-index'), 10)
+        card.addEventListener('drop', async (e) => {
+            e.preventDefault()
+            const dropCard = e.target.closest('.admin-photo-card')
+            if (!dropCard) return
+            dropCard.classList.remove('drag-over')
 
-    if (draggedRecordId === null || draggedIndex === null) return
-    if (draggedRecordId !== targetRecordId || draggedIndex === targetIndex) return
+            const targetCategory = dropCard.getAttribute('data-category')
+            const targetIndex = parseInt(dropCard.getAttribute('data-index'), 10)
 
-    const record = allPortfolioRecords.find(r => r.id == targetRecordId)
-    if (!record || !Array.isArray(record.image_urls)) return
+            if (draggedCategory === null || isNaN(draggedIndex) || isNaN(targetIndex)) return
+            if (draggedCategory !== targetCategory || draggedIndex === targetIndex) return
 
-    // Reorder the array by moving the dragged item to the drop slot
-    const updated = [...record.image_urls]
-    const [movedItem] = updated.splice(draggedIndex, 1)
-    updated.splice(targetIndex, 0, movedItem)
+            // Gather all items currently under this category across any records
+            const matchingRecords = allPortfolioRecords.filter(r => (r.gallery === targetCategory || r.title === targetCategory))
+            if (matchingRecords.length === 0) return
 
-    // Immediate optimistic UI update
-    record.image_urls = updated
-    filterEntriesList()
+            let unifiedImages = []
+            matchingRecords.forEach(r => {
+                if (Array.isArray(r.image_urls) && r.image_urls.length > 0) {
+                    unifiedImages.push(...r.image_urls)
+                }
+                if (r.after_image_url) unifiedImages.push(JSON.stringify({ url: r.after_image_url, label: 'After' }))
+                if (r.before_image_url) unifiedImages.push(JSON.stringify({ url: r.before_image_url, label: 'Before' }))
+            })
 
-    showSaveIndicator('Saving order...')
+            // Reorder the array
+            const [moved] = unifiedImages.splice(draggedIndex, 1)
+            unifiedImages.splice(targetIndex, 0, moved)
 
-    // Persist to Supabase
-    const { error } = await supabaseClient
-        .from('portfolio')
-        .update({ image_urls: updated })
-        .eq('id', targetRecordId)
+            showSaveIndicator('Saving order...')
 
-    if (error) {
-        alert('Could not save reordered photos: ' + error.message)
-        loadSimpleEntries()
-    } else {
-        showSaveIndicator('✓ Order saved!')
-        setTimeout(hideSaveIndicator, 1500)
-    }
-}
+            // Save the newly ordered array into the primary record
+            const primaryRecord = matchingRecords[0]
+            primaryRecord.image_urls = unifiedImages
 
-window.handleCardDragEnd = function(e) {
-    e.currentTarget.classList.remove('dragging')
-    document.querySelectorAll('.admin-photo-card').forEach(card => {
-        card.classList.remove('drag-over')
-        card.classList.remove('dragging')
+            const { error: updateError } = await supabaseClient
+                .from('portfolio')
+                .update({ image_urls: unifiedImages })
+                .eq('id', primaryRecord.id)
+
+            if (updateError) {
+                alert('Could not save order: ' + updateError.message)
+                await loadSimpleEntries()
+            } else {
+                // If there were secondary duplicate rows, clean them up to prevent split arrays
+                if (matchingRecords.length > 1) {
+                    const extraIds = matchingRecords.slice(1).map(r => r.id)
+                    await supabaseClient.from('portfolio').delete().in('id', extraIds)
+                }
+                showSaveIndicator('✓ Order saved!')
+                setTimeout(hideSaveIndicator, 1500)
+                await loadSimpleEntries()
+            }
+        })
+
+        card.addEventListener('dragend', () => {
+            document.querySelectorAll('.admin-photo-card').forEach(c => {
+                c.classList.remove('drag-over')
+                c.classList.remove('dragging')
+            })
+            draggedCategory = null
+            draggedIndex = null
+        })
     })
-    draggedRecordId = null
-    draggedIndex = null
 }
 
 function showSaveIndicator(text) {
