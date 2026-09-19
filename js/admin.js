@@ -35,12 +35,23 @@ async function checkAdmin() {
     return true
 }
 
-// ── Reference Code Generator ──
+// ── Chronological Sequential Reference Map (#JEB-001, #JEB-002, ...) ──
+const bookingRefMap = new Map()
+
+function assignSequentialRefs(bookings) {
+    bookingRefMap.clear()
+    // Sort ascending by creation date (earliest booking = #JEB-001)
+    const chronological = bookings.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+
+    chronological.forEach((b, idx) => {
+        const paddedNum = String(idx + 1).padStart(3, '0')
+        bookingRefMap.set(b.id, `#JEB-${paddedNum}`)
+    })
+}
+
 function getBookingRef(booking) {
-    if (!booking || !booking.id) return '#JEB-0000'
-    const cleanId = String(booking.id).replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
-    const code = cleanId.slice(-4) || '0000'
-    return `#JEB-${code}`
+    if (!booking || !booking.id) return '#JEB-000'
+    return bookingRefMap.get(booking.id) || '#JEB-000'
 }
 
 // ── Weekly Calendar ──
@@ -142,6 +153,7 @@ async function loadBookingsArchive() {
     }
 
     allBookingsList = data
+    assignSequentialRefs(allBookingsList)
     updateTabCounts()
     renderBookingCards()
 }
