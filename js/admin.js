@@ -452,7 +452,7 @@ async function loadCustomers() {
 }
 
 // ══════════════════════════════════════════════════════════
-// ── Unlimited Portfolio Uploader & Manager ──
+// ── Unlimited Portfolio Uploader & Drag-and-Drop Manager ──
 // ══════════════════════════════════════════════════════════
 let selectedUploadFiles = []
 let allPortfolioRecords = []
@@ -576,7 +576,6 @@ if (uploadBtn) {
                     .from('Portfolio')
                     .getPublicUrl(path)
 
-                // Store clean JSON string representation
                 uploadedItems.push(JSON.stringify({
                     url: urlData.publicUrl,
                     label: chosenLabel
@@ -587,7 +586,6 @@ if (uploadBtn) {
                 status.textContent = `Uploaded ${i + 1} of ${selectedUploadFiles.length}...`
             }
 
-            // Look for an existing category record to append or create new
             const existingRecord = allPortfolioRecords.find(r => (r.gallery === category || r.title === category))
 
             if (existingRecord) {
@@ -652,6 +650,10 @@ async function loadSimpleEntries() {
     filterEntriesList()
 }
 
+// Drag State
+let draggedRecordId = null
+let draggedIndex = null
+
 function filterEntriesList() {
     const grid = document.getElementById('simple-photos-grid')
     const totalCount = document.getElementById('total-photos-count')
@@ -700,21 +702,27 @@ function filterEntriesList() {
     }
 
     grid.innerHTML = displayPhotos.map((item) => {
-        const isFirst = item.arrayIndex === 0
-        const isLast = item.arrayIndex === item.totalInRecord - 1
+        const isCover = item.arrayIndex === 0
 
         return `
-            <div class="admin-photo-card">
-                <div class="admin-photo-reorder-bar">
-                    <span class="photo-order-badge">Slide #${item.arrayIndex + 1}</span>
-                    <div class="reorder-btn-group">
-                        ${!isFirst ? `<button class="reorder-btn" onclick="movePhotoOrder('${escapeHtml(item.recordId)}',${item.arrayIndex}, -1)" title="Move earlier in slideshow">◀</button>` : ''}
-                        ${!isFirst ? `<button class="reorder-btn" onclick="makePhotoFirst('${escapeHtml(item.recordId)}',${item.arrayIndex})" title="Set as Slide 1 / Cover">★ 1st</button>` : ''}
-                        ${!isLast ? `<button class="reorder-btn" onclick="movePhotoOrder('${escapeHtml(item.recordId)}',${item.arrayIndex}, 1)" title="Move later in slideshow">▶</button>` : ''}
-                    </div>
+            <div class="admin-photo-card draggable" 
+                 draggable="true" 
+                 data-record-id="${escapeHtml(item.recordId)}" 
+                 data-index="${item.arrayIndex}"
+                 ondragstart="handleCardDragStart(event)"
+                 ondragover="handleCardDragOver(event)"
+                 ondragleave="handleCardDragLeave(event)"
+                 ondrop="handleCardDrop(event)"
+                 ondragend="handleCardDragEnd(event)">
+                
+                <div class="drag-grip-bar">
+                    <span class="drag-handle-badge">
+                        ⠿ ${isCover ? '★ Cover' : `Slide #${item.arrayIndex + 1}`}
+                    </span>
+                    <span style="font-size:11px; color:#fff; text-shadow:0 1px 2px #000;">Drag to shuffle</span>
                 </div>
 
-                <img src="${escapeHtml(item.url)}" alt="Uploaded photo">
+                <img src="${escapeHtml(item.url)}" alt="Uploaded photo" draggable="false">
 
                 <div class="admin-photo-overlay">
                     <span class="photo-category-pill">${escapeHtml(item.gallery)}${item.label ? ` • ${escapeHtml(item.label)}` : ''}</span>
@@ -725,56 +733,94 @@ function filterEntriesList() {
     }).join('')
 }
 
-// ── Move Photo Left/Right within its record ──
-window.movePhotoOrder = async function(recordId, index, direction) {
-    const record = allPortfolioRecords.find(r => r.id == recordId)
-    if (!record || !Array.isArray(record.image_urls)) return
-
-    const newIndex = index + direction
-    if (newIndex < 0 || newIndex >= record.image_urls.length) return
-
-    const updated = [...record.image_urls]
-    const temp = updated[index]
-    updated[index] = updated[newIndex]
-    updated[newIndex] = temp
-
-    // Save ordered array to Supabase
-    const { error } = await supabaseClient
-        .from('portfolio')
-        .update({ image_urls: updated })
-        .eq('id', recordId)
-
-    if (error) {
-        alert('Could not update order: ' + error.message)
-        return
-    }
-
-    record.image_urls = updated
-    filterEntriesList()
+// ── HTML5 Drag & Drop Shuffle Handlers ──
+window.handleCardDragStart = function(e) {
+    const card = e.currentTarget
+    draggedRecordId = card.getAttribute('data-record-id')
+    draggedIndex = parseInt(card.getAttribute('data-index'), 10)
+    card.classList.add('dragging')
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', draggedIndex)
 }
 
-// ── Make Photo First (Slide 1 / Cover) ──
-window.makePhotoFirst = async function(recordId, index) {
-    const record = allPortfolioRecords.find(r => r.id == recordId)
+window.handleCardDragOver = function(e) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    const card = e.currentTarget
+    if (!card.classList.contains('dragging')) {
+        card.classList.add('drag-over')
+    }
+}
+
+window.handleCardDragLeave = function(e) {
+    e.currentTarget.classList.remove('drag-over')
+}
+
+window.handleCardDrop = async function(e) {
+    e.preventDefault()
+    const targetCard = e.currentTarget
+    targetCard.classList.remove('drag-over')
+
+    const targetRecordId = targetCard.getAttribute('data-record-id')
+    const targetIndex = parseInt(targetCard.getAttribute('data-index'), 10)
+
+    if (draggedRecordId === null || draggedIndex === null) return
+    if (draggedRecordId !== targetRecordId || draggedIndex === targetIndex) return
+
+    const record = allPortfolioRecords.find(r => r.id == targetRecordId)
     if (!record || !Array.isArray(record.image_urls)) return
-    if (index === 0) return
 
+    // Reorder the array by moving the dragged item to the drop slot
     const updated = [...record.image_urls]
-    const [selected] = updated.splice(index, 1)
-    updated.unshift(selected)
+    const [movedItem] = updated.splice(draggedIndex, 1)
+    updated.splice(targetIndex, 0, movedItem)
 
+    // Immediate optimistic UI update
+    record.image_urls = updated
+    filterEntriesList()
+
+    showSaveIndicator('Saving order...')
+
+    // Persist to Supabase
     const { error } = await supabaseClient
         .from('portfolio')
         .update({ image_urls: updated })
-        .eq('id', recordId)
+        .eq('id', targetRecordId)
 
     if (error) {
-        alert('Could not set cover image: ' + error.message)
-        return
+        alert('Could not save reordered photos: ' + error.message)
+        loadSimpleEntries()
+    } else {
+        showSaveIndicator('✓ Order saved!')
+        setTimeout(hideSaveIndicator, 1500)
     }
+}
 
-    record.image_urls = updated
-    filterEntriesList()
+window.handleCardDragEnd = function(e) {
+    e.currentTarget.classList.remove('dragging')
+    document.querySelectorAll('.admin-photo-card').forEach(card => {
+        card.classList.remove('drag-over')
+        card.classList.remove('dragging')
+    })
+    draggedRecordId = null
+    draggedIndex = null
+}
+
+function showSaveIndicator(text) {
+    let el = document.getElementById('drag-save-indicator')
+    if (!el) {
+        el = document.createElement('div')
+        el.id = 'drag-save-indicator'
+        el.className = 'drag-save-indicator'
+        document.body.appendChild(el)
+    }
+    el.textContent = text
+    el.style.display = 'block'
+}
+
+function hideSaveIndicator() {
+    const el = document.getElementById('drag-save-indicator')
+    if (el) el.style.display = 'none'
 }
 
 async function deleteIndividualPhoto(recordId, encodedUrl) {
