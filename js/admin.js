@@ -40,7 +40,7 @@ const bookingRefMap = new Map()
 
 function assignSequentialRefs(bookings) {
     bookingRefMap.clear()
-    // Sort ascending by creation date (earliest booking = #JEB-001)
+    // Sort ascending by created_at: earliest booking is #JEB-001
     const chronological = bookings.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
 
     chronological.forEach((b, idx) => {
@@ -455,7 +455,7 @@ async function loadCustomers() {
 }
 
 // ══════════════════════════════════════════════════════════
-// ── Unlimited Simple Portfolio Uploader & Manager ──
+// ── Unlimited Portfolio Uploader & Badge Manager ──
 // ══════════════════════════════════════════════════════════
 let selectedUploadFiles = []
 let allPortfolioRecords = []
@@ -473,7 +473,8 @@ function toggleCustomBadgeInput(val) {
 window.toggleCustomBadgeInput = toggleCustomBadgeInput
 
 function getChosenLabel() {
-    const preset = document.getElementById('badge-label-preset')?.value || ''
+    const preset = document.getElementById('badge-label-preset')?.value || 'none'
+    if (preset === 'none') return ''
     if (preset === 'custom') {
         return (document.getElementById('badge-custom-text')?.value || '').trim()
     }
@@ -541,6 +542,7 @@ if (uploadBtn) {
                     .from('Portfolio')
                     .getPublicUrl(path)
 
+                // Object with photo URL and user-selected badge
                 uploadedItems.push({
                     url: urlData.publicUrl,
                     label: chosenLabel
@@ -551,6 +553,7 @@ if (uploadBtn) {
                 status.textContent = `Uploaded ${i + 1} of ${selectedUploadFiles.length}...`
             }
 
+            // Save records directly under the selected category frame
             const { error: insertError } = await supabaseClient
                 .from('portfolio')
                 .insert([{

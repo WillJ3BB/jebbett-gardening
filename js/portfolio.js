@@ -7,7 +7,6 @@ const CATEGORIES = [
     'General Maintenance'
 ];
 
-// Helper to normalize category names so variations match the right frame
 function normalizeCategory(raw) {
     if (!raw) return null;
     const clean = raw.trim().toLowerCase();
@@ -38,7 +37,6 @@ async function loadPortfolio() {
         return;
     }
 
-    // Initialize buckets for each frame
     CATEGORIES.forEach(cat => {
         window.categorySlides[cat] = [];
         frameIndices[cat] = 0;
@@ -46,35 +44,35 @@ async function loadPortfolio() {
 
     if (data && data.length > 0) {
         data.forEach(entry => {
-            // Find which frame this belongs to
             const matchedCategory = normalizeCategory(entry.gallery) || normalizeCategory(entry.title);
 
-            // If it doesn't match any of our 5, skip rather than dumping into Lawn Cuts
             if (!matchedCategory || !window.categorySlides[matchedCategory]) return;
 
-            const images = entry.image_urls && entry.image_urls.length > 0
-                ? entry.image_urls
-                : [entry.after_image_url, entry.before_image_url].filter(Boolean);
+            let items = [];
+            if (Array.isArray(entry.image_urls) && entry.image_urls.length > 0) {
+                items = entry.image_urls;
+            } else {
+                items = [entry.after_image_url, entry.before_image_url].filter(Boolean);
+            }
 
-            const total = images.length;
+            items.forEach((item) => {
+                const url = typeof item === 'object' && item !== null ? item.url : item;
+                // Only use explicit label; if none, leave blank
+                const label = typeof item === 'object' && item !== null ? (item.label || '') : '';
 
-            images.forEach((url, i) => {
-                let label = '';
-                if (i === 0 && total > 1) label = 'Before';
-                else if (i === total - 1 && total > 1) label = 'After';
-
-                window.categorySlides[matchedCategory].push({
-                    url,
-                    label,
-                    title: entry.title || matchedCategory,
-                    location: entry.location || '',
-                    description: entry.description || ''
-                });
+                if (url) {
+                    window.categorySlides[matchedCategory].push({
+                        url,
+                        label,
+                        title: entry.title || matchedCategory,
+                        location: entry.location || '',
+                        description: entry.description || ''
+                    });
+                }
             });
         });
     }
 
-    // Build the 5 frames HTML
     let html = '<div class="frames-grid">';
 
     CATEGORIES.forEach((categoryName, idx) => {
@@ -121,7 +119,6 @@ async function loadPortfolio() {
     grid.innerHTML = html;
 }
 
-// ── Move through photos inside a frame ──
 function shiftFrame(categoryName, frameIdx, delta) {
     const slides = window.categorySlides[categoryName];
     if (!slides || slides.length <= 1) return;

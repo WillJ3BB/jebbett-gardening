@@ -145,16 +145,16 @@
                     <input type="file" id="portfolio-files" accept="image/*" multiple>
                 </div>
 
-                <!-- Label Selector -->
+                <!-- Label / Badge Selector -->
                 <div class="form-group">
                     <label for="badge-label-preset"><strong>Photo Badge / Label:</strong></label>
                     <select id="badge-label-preset" onchange="toggleCustomBadgeInput(this.value)">
-                        <option value="">None (No badge)</option>
+                        <option value="none">None (Turn Off - No Badge)</option>
                         <option value="Before">Before</option>
                         <option value="After">After</option>
                         <option value="custom">Custom Text...</option>
                     </select>
-                    <input type="text" id="badge-custom-text" placeholder="e.g. In Progress, Completed, Transformation" style="display:none; margin-top:8px;" maxlength="24">
+                    <input type="text" id="badge-custom-text" placeholder="e.g. In Progress, Completed, Overhaul" style="display:none; margin-top:8px;" maxlength="24">
                 </div>
 
                 <div id="upload-preview" class="upload-preview-grid"></div>
