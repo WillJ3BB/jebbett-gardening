@@ -55,22 +55,60 @@
             <div id="week-calendar" class="week-calendar-grid"></div>
         </section>
 
-        <!-- Bookings Management -->
-        <section class="admin-bookings-section">
-            <div class="admin-bookings-header">
-                <h2>Incoming Bookings</h2>
-                <div class="booking-filters">
-                    <button class="filter-btn" data-filter="all">All</button>
-                    <button class="filter-btn active" data-filter="pending">Pending</button>
-                    <button class="filter-btn" data-filter="confirmed">Confirmed</button>
-                    <button class="filter-btn" data-filter="completed">Completed</button>
-                    <button class="filter-btn" data-filter="cancelled">Cancelled</button>
+        <!-- Bookings File Archive & Window System -->
+        <section class="admin-bookings-section file-archive-system">
+            <div class="archive-header-bar">
+                <div class="archive-title">
+                    <span class="folder-icon">📁</span>
+                    <h2>Bookings Archive &amp; File Manager</h2>
+                </div>
+                <div class="archive-search-box">
+                    <input type="text" id="booking-search-input" placeholder="🔍 Search Ref (#JEB-...), Name, Phone, Address..." oninput="handleBookingSearch()">
                 </div>
             </div>
-            <div id="bookings-list">
-                <p>Loading bookings...</p>
+
+            <!-- Folder Tabs -->
+            <div class="archive-folder-tabs">
+                <button class="folder-tab active" data-tab="all" onclick="switchFolderTab('all')">
+                    📁 All Files (<span id="tab-count-all">0</span>)
+                </button>
+                <button class="folder-tab tab-pending" data-tab="pending" onclick="switchFolderTab('pending')">
+                    ⏳ Pending (<span id="tab-count-pending">0</span>)
+                </button>
+                <button class="folder-tab tab-confirmed" data-tab="confirmed" onclick="switchFolderTab('confirmed')">
+                    📅 Confirmed (<span id="tab-count-confirmed">0</span>)
+                </button>
+                <button class="folder-tab tab-completed" data-tab="completed" onclick="switchFolderTab('completed')">
+                    ✅ Completed Archive (<span id="tab-count-completed">0</span>)
+                </button>
+                <button class="folder-tab tab-cancelled" data-tab="cancelled" onclick="switchFolderTab('cancelled')">
+                    🚫 Cancelled (<span id="tab-count-cancelled">0</span>)
+                </button>
+            </div>
+
+            <!-- File Cards Grid -->
+            <div class="archive-files-container" id="bookings-files-grid">
+                <p class="loading-files-msg">Loading booking files...</p>
             </div>
         </section>
+
+        <!-- Floating Dossier / File Window Modal -->
+        <div id="file-window-modal" class="dossier-modal-overlay" style="display:none;" onclick="handleModalOverlayClick(event)">
+            <div class="dossier-modal-window">
+                <div class="dossier-window-topbar">
+                    <div class="window-decorations">
+                        <span class="w-dot dot-red" onclick="closeDossierWindow()"></span>
+                        <span class="w-dot dot-yellow"></span>
+                        <span class="w-dot dot-green"></span>
+                    </div>
+                    <span class="window-ref-title" id="dossier-ref-title">Dossier File</span>
+                    <button class="dossier-close-btn" onclick="closeDossierWindow()">✕</button>
+                </div>
+                <div class="dossier-window-content" id="dossier-content-body">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </div>
 
         <!-- Customer List -->
         <section class="admin-customers-section">
@@ -90,7 +128,7 @@
         <section class="admin-portfolio-simple">
             <div class="admin-card">
                 <h3>Upload New Photos</h3>
-                <p class="admin-subtext">Select a category frame, pick any number of photos, and upload them directly to your portfolio page.</p>
+                <p class="admin-subtext">Select a category frame, choose photos, set an optional badge, and upload.</p>
 
                 <div class="form-group">
                     <label for="upload-category"><strong>Select Category Frame:</strong></label>
@@ -106,6 +144,18 @@
                 <div class="form-group">
                     <label for="portfolio-files"><strong>Choose Photos (Unlimited):</strong></label>
                     <input type="file" id="portfolio-files" accept="image/*" multiple>
+                </div>
+
+                <!-- Label Selector -->
+                <div class="form-group">
+                    <label for="badge-label-preset"><strong>Photo Badge / Label:</strong></label>
+                    <select id="badge-label-preset" onchange="toggleCustomBadgeInput(this.value)">
+                        <option value="">None (No badge)</option>
+                        <option value="Before">Before</option>
+                        <option value="After">After</option>
+                        <option value="custom">Custom Text...</option>
+                    </select>
+                    <input type="text" id="badge-custom-text" placeholder="e.g. In Progress, Completed, Transformation" style="display:none; margin-top:8px;" maxlength="24">
                 </div>
 
                 <div id="upload-preview" class="upload-preview-grid"></div>

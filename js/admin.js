@@ -10,9 +10,8 @@ function escapeHtml(text) {
 }
 
 // ── Strict Admin Access Control ──
-// Add your authorized admin email(s) here
 const ADMIN_EMAILS = [
-    'jack.jebbett@hotmail.co.uk' 
+    'jack.jebbett@hotmail.co.uk'
 ];
 
 async function checkAdmin() {
@@ -24,7 +23,7 @@ async function checkAdmin() {
     }
 
     const user = session.user
-    const isExplicitAdmin = ADMIN_EMAILS.some(e => e.toLowerCase() === (user.email || '').toLowerCase())
+    const isExplicitAdmin = ADMIN_EMAILS.some(e => e.toLowerCase() === (user.email || '').toLowerCase().trim())
     const hasAdminRole = user.app_metadata?.role === 'admin' || user.user_metadata?.is_admin === true
 
     if (!isExplicitAdmin && !hasAdminRole) {
@@ -34,6 +33,14 @@ async function checkAdmin() {
     }
 
     return true
+}
+
+// ── Reference Code Generator ──
+function getBookingRef(booking) {
+    if (!booking || !booking.id) return '#JEB-0000'
+    const cleanId = String(booking.id).replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+    const code = cleanId.slice(-4) || '0000'
+    return `#JEB-${code}`
 }
 
 // ── Weekly Calendar ──
@@ -56,7 +63,7 @@ async function loadWeekCalendar() {
     const startStr = weekStart.toISOString().split('T')[0]
     const endStr = weekEnd.toISOString().split('T')[0]
 
-    const { data, error } = await supabaseClient
+    const { data } = await supabaseClient
         .from('bookings')
         .select('*')
         .gte('preferred_date', startStr)
@@ -87,7 +94,7 @@ async function loadWeekCalendar() {
                     </div>
                     <div class="week-day-bookings">
                         ${dayBookings.length === 0 ? '<p class="no-bookings-day">—</p>' : dayBookings.map(b => `
-                            <div class="week-booking-item ${escapeHtml(b.status)}">
+                            <div class="week-booking-item ${escapeHtml(b.status)}" onclick="openBookingDossier('${escapeHtml(b.id)}')">
                                 <span class="week-booking-name">${escapeHtml(b.full_name)}</span>
                                 <span class="week-booking-service">${escapeHtml((b.service_type || '').replace(/-/g, ' '))}</span>
                                 <span class="week-booking-time">${escapeHtml(b.preferred_time || 'Flexible')}</span>
@@ -116,107 +123,270 @@ if (nextWeekBtn) {
     })
 }
 
-// ── Load Bookings ──
-let currentFilter = 'pending'
+// ══════════════════════════════════════════════════════════
+// ── Bookings File Archive & Window Dossier System ──
+// ══════════════════════════════════════════════════════════
+let allBookingsList = []
+let activeFolderTab = 'all'
+let searchFilterQuery = ''
 
-async function loadBookings() {
-    let query = supabaseClient
+async function loadBookingsArchive() {
+    const { data, error } = await supabaseClient
         .from('bookings')
         .select('*')
         .order('created_at', { ascending: false })
 
-    if (currentFilter !== 'all') {
-        query = query.eq('status', currentFilter)
-    }
-
-    const { data, error } = await query
-    const list = document.getElementById('bookings-list')
-    if (!list) return
-
-    if (error || !data || data.length === 0) {
-        list.innerHTML = '<p>No bookings found.</p>'
+    if (error || !data) {
+        console.error('Error fetching bookings:', error)
         return
     }
 
-    list.innerHTML = data.map(booking => {
+    allBookingsList = data
+    updateTabCounts()
+    renderBookingCards()
+}
+
+function updateTabCounts() {
+    const counts = {
+        all: allBookingsList.length,
+        pending: allBookingsList.filter(b => (b.status || 'pending').toLowerCase() === 'pending').length,
+        confirmed: allBookingsList.filter(b => (b.status || '').toLowerCase() === 'confirmed').length,
+        completed: allBookingsList.filter(b => (b.status || '').toLowerCase() === 'completed').length,
+        cancelled: allBookingsList.filter(b => (b.status || '').toLowerCase() === 'cancelled').length
+    }
+
+    const setVal = (id, val) => {
+        const el = document.getElementById(id)
+        if (el) el.textContent = val
+    }
+
+    setVal('tab-count-all', counts.all)
+    setVal('tab-count-pending', counts.pending)
+    setVal('tab-count-confirmed', counts.confirmed)
+    setVal('tab-count-completed', counts.completed)
+    setVal('tab-count-cancelled', counts.cancelled)
+}
+
+function switchFolderTab(tabName) {
+    activeFolderTab = tabName
+    document.querySelectorAll('.folder-tab').forEach(tab => {
+        if (tab.dataset.tab === tabName) {
+            tab.classList.add('active')
+        } else {
+            tab.classList.remove('active')
+        }
+    })
+    renderBookingCards()
+}
+window.switchFolderTab = switchFolderTab
+
+function handleBookingSearch() {
+    const input = document.getElementById('booking-search-input')
+    searchFilterQuery = (input.value || '').trim().toLowerCase()
+    renderBookingCards()
+}
+window.handleBookingSearch = handleBookingSearch
+
+function renderBookingCards() {
+    const grid = document.getElementById('bookings-files-grid')
+    if (!grid) return
+
+    let filtered = allBookingsList.slice()
+
+    // Filter by Folder Tab
+    if (activeFolderTab !== 'all') {
+        filtered = filtered.filter(b => (b.status || 'pending').toLowerCase() === activeFolderTab)
+    }
+
+    // Filter by Search Query
+    if (searchFilterQuery) {
+        filtered = filtered.filter(b => {
+            const ref = getBookingRef(b).toLowerCase()
+            const name = (b.full_name || '').toLowerCase()
+            const email = (b.email || '').toLowerCase()
+            const phone = (b.phone || '').toLowerCase()
+            const address = (b.address || '').toLowerCase()
+            const service = (b.service_type || '').toLowerCase()
+
+            return ref.includes(searchFilterQuery) ||
+                   name.includes(searchFilterQuery) ||
+                   email.includes(searchFilterQuery) ||
+                   phone.includes(searchFilterQuery) ||
+                   address.includes(searchFilterQuery) ||
+                   service.includes(searchFilterQuery)
+        })
+    }
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: #666;">
+                <p style="font-size: 16px; margin-bottom: 6px;">📂 No booking files found.</p>
+                <small>${searchFilterQuery ? 'Try clearing your search query.' : 'No files in this folder tab yet.'}</small>
+            </div>
+        `
+        return
+    }
+
+    grid.innerHTML = filtered.map(booking => {
         const id = escapeHtml(booking.id)
-        const status = escapeHtml(booking.status || 'pending')
-        const service = escapeHtml((booking.service_type || '').replace(/-/g, ' '))
+        const ref = getBookingRef(booking)
         const name = escapeHtml(booking.full_name)
-        const email = escapeHtml(booking.email)
-        const phone = escapeHtml(booking.phone || 'Not provided')
-        const date = escapeHtml(new Date(booking.preferred_date).toLocaleDateString('en-GB'))
+        const service = escapeHtml((booking.service_type || '').replace(/-/g, ' '))
+        const date = escapeHtml(new Date(booking.preferred_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))
         const time = escapeHtml(booking.preferred_time || 'Flexible')
-        const address = escapeHtml(booking.address || 'Not provided')
-        const notes = escapeHtml(booking.notes || '')
-        const submitted = escapeHtml(new Date(booking.created_at).toLocaleDateString('en-GB'))
-        const adminNotes = escapeHtml(booking.admin_notes || '')
+        const status = escapeHtml(booking.status || 'pending')
 
         return `
-            <div class="admin-booking-card ${status}">
-                <div class="admin-booking-header">
-                    <h3>${service}</h3>
-                    <span class="booking-status ${status}">${status}</span>
+            <div class="booking-folder-card status-${status}" onclick="openBookingDossier('${id}')">
+                <div>
+                    <div class="folder-card-header">
+                        <span class="card-ref-badge">${ref}</span>
+                        <span class="card-status-badge status-badge-${status}">${status}</span>
+                    </div>
+                    <div class="folder-card-body">
+                        <h3>${name}</h3>
+                        <span class="folder-service-tag">🌿 ${service}</span>
+                        <p class="folder-card-info">📅 <strong>Date:</strong> ${date}</p>
+                        <p class="folder-card-info">⏰ <strong>Time:</strong> ${time}</p>
+                    </div>
                 </div>
-                <div class="admin-booking-details">
-                    <p><strong>Name:</strong> ${name}</p>
-                    <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
-                    <p><strong>Phone:</strong> ${phone}</p>
-                    <p><strong>Date:</strong> ${date}</p>
-                    <p><strong>Time:</strong> ${time}</p>
-                    <p><strong>Address:</strong> ${address}</p>
-                    ${notes ? `<p><strong>Customer Notes:</strong> ${notes}</p>` : ''}
-                    <p><strong>Submitted:</strong> ${submitted}</p>
-                </div>
-                <div class="admin-notes-section">
-                    <label><strong>Internal Notes</strong></label>
-                    <textarea class="admin-notes-input" id="notes-${id}" rows="2" placeholder="Private notes about this job...">${adminNotes}</textarea>
-                    <button class="save-notes-btn" onclick="saveNotes('${id}')">Save Note</button>
-                </div>
-                <div class="admin-booking-actions">
-                    <button onclick="updateBookingStatus('${id}', 'confirmed')" class="status-btn confirm-btn" ${status === 'confirmed' ? 'disabled' : ''}>Confirm</button>
-                    <button onclick="updateBookingStatus('${id}', 'completed')" class="status-btn complete-btn" ${status === 'completed' ? 'disabled' : ''}>Complete</button>
-                    <button onclick="updateBookingStatus('${id}', 'cancelled')" class="status-btn cancel-btn" ${status === 'cancelled' ? 'disabled' : ''}>Cancel</button>
+                <div class="folder-card-footer">
+                    <span style="font-size:12px; color:#888;">Tap to open file</span>
+                    <span class="folder-open-link">Open Dossier &rarr;</span>
                 </div>
             </div>
         `
     }).join('')
 }
 
-document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'))
-        btn.classList.add('active')
-        currentFilter = btn.dataset.filter
-        loadBookings()
-    })
-})
+// ── Open Dossier Window Modal ──
+window.openBookingDossier = function(id) {
+    const booking = allBookingsList.find(b => b.id == id)
+    if (!booking) return
 
-// ── Update Booking Status ──
-async function updateBookingStatus(id, status) {
+    const ref = getBookingRef(booking)
+    const modal = document.getElementById('file-window-modal')
+    const refTitle = document.getElementById('dossier-ref-title')
+    const body = document.getElementById('dossier-content-body')
+
+    refTitle.textContent = `📁 File Dossier: ${ref} — ${booking.full_name}`
+
+    const name = escapeHtml(booking.full_name)
+    const email = escapeHtml(booking.email)
+    const phone = escapeHtml(booking.phone || 'Not provided')
+    const address = escapeHtml(booking.address || 'Not specified')
+    const service = escapeHtml((booking.service_type || '').replace(/-/g, ' '))
+    const date = escapeHtml(new Date(booking.preferred_date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
+    const time = escapeHtml(booking.preferred_time || 'Flexible')
+    const customerNotes = escapeHtml(booking.notes || 'None')
+    const adminNotes = escapeHtml(booking.admin_notes || '')
+    const status = escapeHtml(booking.status || 'pending')
+    const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.address || '')}`
+
+    body.innerHTML = `
+        <div class="dossier-status-bar">
+            <div>
+                <span style="font-size:12px; color:#555;">Current Status:</span><br>
+                <strong class="card-status-badge status-badge-${status}" style="font-size:13px;">${status}</strong>
+            </div>
+            <div class="dossier-status-buttons">
+                <button class="dossier-btn btn-status-pending" onclick="updateDossierStatus('${booking.id}', 'pending')">Pending</button>
+                <button class="dossier-btn btn-status-confirmed" onclick="updateDossierStatus('${booking.id}', 'confirmed')">Confirm</button>
+                <button class="dossier-btn btn-status-completed" onclick="updateDossierStatus('${booking.id}', 'completed')">Complete</button>
+                <button class="dossier-btn btn-status-cancelled" onclick="updateDossierStatus('${booking.id}', 'cancelled')">Cancel</button>
+            </div>
+        </div>
+
+        <div class="dossier-grid">
+            <div class="dossier-row">
+                <strong>Reference Code</strong>
+                <span class="card-ref-badge">${ref}</span>
+            </div>
+            <div class="dossier-row">
+                <strong>Requested Service</strong>
+                <span>🌿 ${service}</span>
+            </div>
+            <div class="dossier-row">
+                <strong>Appointment Date</strong>
+                <span>${date}</span>
+            </div>
+            <div class="dossier-row">
+                <strong>Time Slot</strong>
+                <span>${time}</span>
+            </div>
+            <div class="dossier-row">
+                <strong>Customer Name</strong>
+                <span>${name}</span>
+            </div>
+            <div class="dossier-row">
+                <strong>Phone Number</strong>
+                <span><a href="tel:${phone}">📞 ${phone}</a></span>
+            </div>
+            <div class="dossier-row" style="grid-column: 1 / -1;">
+                <strong>Email Address</strong>
+                <span><a href="mailto:${email}?subject=Jebbett Gardening - Appointment ${ref}">✉️ ${email}</a></span>
+            </div>
+            <div class="dossier-row" style="grid-column: 1 / -1;">
+                <strong>Property Address</strong>
+                <span>📍 ${address} &nbsp; <a href="${mapsLink}" target="_blank" rel="noopener">(Open in Maps ↗)</a></span>
+            </div>
+            <div class="dossier-row" style="grid-column: 1 / -1;">
+                <strong>Client Instructions / Job Notes</strong>
+                <span style="font-style: italic; color: #555;">"${customerNotes}"</span>
+            </div>
+        </div>
+
+        <div class="dossier-notes-area">
+            <label><strong>🔒 Private Admin Notes &amp; Job Instructions:</strong></label>
+            <textarea id="modal-notes-${booking.id}" rows="3" placeholder="Add internal notes about gate codes, pricing, tools needed, etc...">${adminNotes}</textarea>
+            <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
+                <button class="btn" onclick="saveDossierNotes('${booking.id}')" style="padding: 7px 16px; font-size: 13px;">Save Notes</button>
+                <span id="dossier-save-msg" style="color: #2d5a27; font-weight: bold; font-size: 13px;"></span>
+            </div>
+        </div>
+    `
+
+    modal.style.display = 'flex'
+}
+
+window.closeDossierWindow = function() {
+    document.getElementById('file-window-modal').style.display = 'none'
+}
+
+window.handleModalOverlayClick = function(e) {
+    if (e.target === document.getElementById('file-window-modal')) {
+        closeDossierWindow()
+    }
+}
+
+window.updateDossierStatus = async function(id, newStatus) {
     const { error } = await supabaseClient
         .from('bookings')
-        .update({ status })
+        .update({ status: newStatus })
         .eq('id', id)
 
     if (error) {
-        alert('Error updating booking: ' + error.message)
+        alert('Could not update status: ' + error.message)
         return
     }
 
-    loadBookings()
+    const b = allBookingsList.find(x => x.id == id)
+    if (b) b.status = newStatus
+
+    updateTabCounts()
+    renderBookingCards()
     loadWeekCalendar()
+    openBookingDossier(id)
 }
 
-// ── Save Internal Notes ──
-async function saveNotes(id) {
-    const textarea = document.getElementById(`notes-${id}`)
+window.saveDossierNotes = async function(id) {
+    const textarea = document.getElementById(`modal-notes-${id}`)
+    const msg = document.getElementById('dossier-save-msg')
     if (!textarea) return
-    const notes = textarea.value
 
     const { error } = await supabaseClient
         .from('bookings')
-        .update({ admin_notes: notes })
+        .update({ admin_notes: textarea.value })
         .eq('id', id)
 
     if (error) {
@@ -224,14 +394,16 @@ async function saveNotes(id) {
         return
     }
 
-    const saveBtn = document.querySelector(`[onclick="saveNotes('${id}')"]`)
-    if (saveBtn) {
-        saveBtn.textContent = 'Saved!'
-        setTimeout(() => { saveBtn.textContent = 'Save Note' }, 2000)
+    const b = allBookingsList.find(x => x.id == id)
+    if (b) b.admin_notes = textarea.value
+
+    if (msg) {
+        msg.textContent = '✓ Saved!'
+        setTimeout(() => { msg.textContent = '' }, 2000)
     }
 }
 
-// ── Load Customer List ──
+// ── Customer Summary ──
 async function loadCustomers() {
     const list = document.getElementById('customers-list')
     if (!list) return
@@ -276,6 +448,26 @@ async function loadCustomers() {
 let selectedUploadFiles = []
 let allPortfolioRecords = []
 
+function toggleCustomBadgeInput(val) {
+    const customInput = document.getElementById('badge-custom-text')
+    if (!customInput) return
+    if (val === 'custom') {
+        customInput.style.display = 'block'
+        customInput.focus()
+    } else {
+        customInput.style.display = 'none'
+    }
+}
+window.toggleCustomBadgeInput = toggleCustomBadgeInput
+
+function getChosenLabel() {
+    const preset = document.getElementById('badge-label-preset')?.value || ''
+    if (preset === 'custom') {
+        return (document.getElementById('badge-custom-text')?.value || '').trim()
+    }
+    return preset
+}
+
 const fileInput = document.getElementById('portfolio-files')
 const previewContainer = document.getElementById('upload-preview')
 
@@ -303,6 +495,7 @@ const uploadBtn = document.getElementById('simple-upload-btn')
 if (uploadBtn) {
     uploadBtn.addEventListener('click', async () => {
         const category = document.getElementById('upload-category').value
+        const chosenLabel = getChosenLabel()
         const status = document.getElementById('simple-upload-status')
         const progressBar = document.getElementById('upload-progress-bar')
         const progressFill = document.getElementById('progress-fill')
@@ -318,7 +511,7 @@ if (uploadBtn) {
         progressBar.style.display = 'block'
         uploadBtn.disabled = true
 
-        const uploadedUrls = []
+        const uploadedItems = []
 
         try {
             for (let i = 0; i < selectedUploadFiles.length; i++) {
@@ -336,7 +529,10 @@ if (uploadBtn) {
                     .from('Portfolio')
                     .getPublicUrl(path)
 
-                uploadedUrls.push(urlData.publicUrl)
+                uploadedItems.push({
+                    url: urlData.publicUrl,
+                    label: chosenLabel
+                })
 
                 const percent = Math.round(((i + 1) / selectedUploadFiles.length) * 100)
                 progressFill.style.width = `${percent}%`
@@ -348,13 +544,13 @@ if (uploadBtn) {
                 .insert([{
                     title: category,
                     gallery: category,
-                    image_urls: uploadedUrls,
+                    image_urls: uploadedItems,
                     created_at: new Date().toISOString()
                 }])
 
             if (insertError) throw insertError
 
-            status.textContent = `Successfully uploaded ${uploadedUrls.length} photo(s) to ${category}!`
+            status.textContent = `Successfully uploaded ${uploadedItems.length} photo(s) to ${category}!`
             status.style.color = '#2d5a27'
             fileInput.value = ''
             previewContainer.innerHTML = ''
@@ -401,16 +597,24 @@ function filterEntriesList() {
     allPortfolioRecords.forEach(record => {
         if (filter !== 'ALL' && record.gallery !== filter) return
 
-        const imgs = record.image_urls && record.image_urls.length > 0
-            ? record.image_urls
-            : [record.after_image_url, record.before_image_url].filter(Boolean)
+        let imgs = []
+        if (Array.isArray(record.image_urls) && record.image_urls.length > 0) {
+            imgs = record.image_urls
+        } else {
+            imgs = [record.after_image_url, record.before_image_url].filter(Boolean)
+        }
 
-        imgs.forEach((url) => {
-            displayPhotos.push({
-                recordId: record.id,
-                gallery: record.gallery || 'General Maintenance',
-                url: url
-            })
+        imgs.forEach((item) => {
+            const url = typeof item === 'object' && item !== null ? item.url : item
+            const label = typeof item === 'object' && item !== null ? (item.label || '') : ''
+            if (url) {
+                displayPhotos.push({
+                    recordId: record.id,
+                    gallery: record.gallery || 'General Maintenance',
+                    url: url,
+                    label: label
+                })
+            }
         })
     })
 
@@ -425,7 +629,7 @@ function filterEntriesList() {
         <div class="admin-photo-card">
             <img src="${escapeHtml(item.url)}" alt="Uploaded photo">
             <div class="admin-photo-overlay">
-                <span class="photo-category-pill">${escapeHtml(item.gallery)}</span>
+                <span class="photo-category-pill">${escapeHtml(item.gallery)}${item.label ? ` • ${escapeHtml(item.label)}` : ''}</span>
                 <button class="delete-photo-btn" onclick="deleteIndividualPhoto('${escapeHtml(item.recordId)}', '${encodeURIComponent(item.url)}')" title="Delete photo">✕</button>
             </div>
         </div>
@@ -446,7 +650,10 @@ async function deleteIndividualPhoto(recordId, encodedUrl) {
     const record = allPortfolioRecords.find(r => r.id == recordId)
     if (!record) return
 
-    const currentImages = (record.image_urls || []).filter(u => u !== targetUrl)
+    const currentImages = (record.image_urls || []).filter(u => {
+        const itemUrl = typeof u === 'object' && u !== null ? u.url : u
+        return itemUrl !== targetUrl
+    })
 
     if (currentImages.length === 0) {
         await supabaseClient.from('portfolio').delete().eq('id', recordId)
@@ -461,7 +668,7 @@ async function deleteIndividualPhoto(recordId, encodedUrl) {
 checkAdmin().then(isAdmin => {
     if (isAdmin) {
         loadWeekCalendar()
-        loadBookings()
+        loadBookingsArchive()
         loadCustomers()
         loadSimpleEntries()
     }
