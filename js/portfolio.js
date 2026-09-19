@@ -20,6 +20,33 @@ function normalizeCategory(raw) {
     return null;
 }
 
+// Safely extracts a clean URL and label from ANY format (string, JSON string, or object)
+function parsePhotoItem(item) {
+    if (!item) return null;
+
+    if (typeof item === 'string' && item.trim().startsWith('{') && item.includes('url')) {
+        try {
+            item = JSON.parse(item);
+        } catch (e) {}
+    }
+
+    if (typeof item === 'object' && item !== null) {
+        return {
+            url: item.url || '',
+            label: item.label || ''
+        };
+    }
+
+    if (typeof item === 'string') {
+        return {
+            url: item,
+            label: ''
+        };
+    }
+
+    return null;
+}
+
 const frameIndices = {};
 window.categorySlides = {};
 
@@ -45,29 +72,37 @@ async function loadPortfolio() {
     if (data && data.length > 0) {
         data.forEach(entry => {
             const matchedCategory = normalizeCategory(entry.gallery) || normalizeCategory(entry.title);
-
             if (!matchedCategory || !window.categorySlides[matchedCategory]) return;
 
-            let items = [];
+            let rawItems = [];
+
+            // Check array of image_urls
             if (Array.isArray(entry.image_urls) && entry.image_urls.length > 0) {
-                items = entry.image_urls;
-            } else {
-                items = [entry.after_image_url, entry.before_image_url].filter(Boolean);
+                rawItems.push(...entry.image_urls);
             }
 
-            items.forEach((item) => {
-                const url = typeof item === 'object' && item !== null ? item.url : item;
-                // Only use explicit label; if none, leave blank
-                const label = typeof item === 'object' && item !== null ? (item.label || '') : '';
+            // Check after_image_url and before_image_url
+            if (entry.after_image_url) {
+                rawItems.push({ url: entry.after_image_url, label: 'After' });
+            }
+            if (entry.before_image_url) {
+                rawItems.push({ url: entry.before_image_url, label: 'Before' });
+            }
 
-                if (url) {
-                    window.categorySlides[matchedCategory].push({
-                        url,
-                        label,
-                        title: entry.title || matchedCategory,
-                        location: entry.location || '',
-                        description: entry.description || ''
-                    });
+            rawItems.forEach((rawItem) => {
+                const parsed = parsePhotoItem(rawItem);
+                if (parsed && parsed.url && typeof parsed.url === 'string' && parsed.url.startsWith('http')) {
+                    // Prevent duplicates
+                    const alreadyExists = window.categorySlides[matchedCategory].some(s => s.url === parsed.url);
+                    if (!alreadyExists) {
+                        window.categorySlides[matchedCategory].push({
+                            url: parsed.url,
+                            label: parsed.label,
+                            title: entry.title || matchedCategory,
+                            location: entry.location || '',
+                            description: entry.description || ''
+                        });
+                    }
                 }
             });
         });
@@ -90,10 +125,10 @@ async function loadPortfolio() {
                 <div class="frame-viewport">
                     ${hasImages ? `
                         <img id="frame-img-${idx}" 
-                             src="${current.url}" 
-                             alt="${current.title}" 
+                             src="${escapeAttr(current.url)}" 
+                             alt="${escapeAttr(current.title)}" 
                              onclick="openFrameLightbox('${categoryName}')">
-                        ${current.label ? `<span class="frame-label" id="label-${idx}">${current.label}</span>` : `<span class="frame-label" id="label-${idx}" style="display:none;"></span>`}
+                        ${current.label ? `<span class="frame-label" id="label-${idx}">${escapeAttr(current.label)}</span>` : `<span class="frame-label" id="label-${idx}" style="display:none;"></span>`}
                     ` : `
                         <div class="frame-empty">
                             <p>No photos uploaded yet.</p>
@@ -107,9 +142,9 @@ async function loadPortfolio() {
                 </div>
 
                 <div class="frame-details">
-                    <h3 id="title-${idx}">${hasImages ? current.title : 'Awaiting New Work'}</h3>
-                    <p class="frame-loc" id="loc-${idx}">${hasImages && current.location ? `📍 ${current.location}` : ''}</p>
-                    <p class="frame-desc" id="desc-${idx}">${hasImages && current.description ? current.description : ''}</p>
+                    <h3 id="title-${idx}">${hasImages ? escapeAttr(current.title) : 'Awaiting New Work'}</h3>
+                    <p class="frame-loc" id="loc-${idx}">${hasImages && current.location ? `📍 ${escapeAttr(current.location)}` : ''}</p>
+                    <p class="frame-desc" id="desc-${idx}">${hasImages && current.description ? escapeAttr(current.description) : ''}</p>
                 </div>
             </div>
         `;
@@ -117,6 +152,11 @@ async function loadPortfolio() {
 
     html += '</div>';
     grid.innerHTML = html;
+}
+
+function escapeAttr(str) {
+    if (!str) return '';
+    return String(str).replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function shiftFrame(categoryName, frameIdx, delta) {
