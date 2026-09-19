@@ -587,16 +587,35 @@ if (uploadBtn) {
                 status.textContent = `Uploaded ${i + 1} of ${selectedUploadFiles.length}...`
             }
 
-            const { error: insertError } = await supabaseClient
-                .from('portfolio')
-                .insert([{
-                    title: category,
-                    gallery: category,
-                    image_urls: uploadedItems,
-                    created_at: new Date().toISOString()
-                }])
+            // Look for an existing category record to append or create new
+            const existingRecord = allPortfolioRecords.find(r => (r.gallery === category || r.title === category))
 
-            if (insertError) throw insertError
+            if (existingRecord) {
+                let existingUrls = []
+                if (Array.isArray(existingRecord.image_urls)) existingUrls.push(...existingRecord.image_urls)
+                if (existingRecord.after_image_url) existingUrls.push(JSON.stringify({ url: existingRecord.after_image_url, label: 'After' }))
+                if (existingRecord.before_image_url) existingUrls.push(JSON.stringify({ url: existingRecord.before_image_url, label: 'Before' }))
+
+                const combined = [...existingUrls, ...uploadedItems]
+
+                const { error: updateError } = await supabaseClient
+                    .from('portfolio')
+                    .update({ image_urls: combined })
+                    .eq('id', existingRecord.id)
+
+                if (updateError) throw updateError
+            } else {
+                const { error: insertError } = await supabaseClient
+                    .from('portfolio')
+                    .insert([{
+                        title: category,
+                        gallery: category,
+                        image_urls: uploadedItems,
+                        created_at: new Date().toISOString()
+                    }])
+
+                if (insertError) throw insertError
+            }
 
             status.textContent = `Successfully uploaded ${uploadedItems.length} photo(s) to ${category}!`
             status.style.color = '#2d5a27'
@@ -648,27 +667,26 @@ function filterEntriesList() {
     }
 
     allPortfolioRecords.forEach(record => {
-        if (filter !== 'ALL' && record.gallery !== filter) return
+        const cat = record.gallery || record.title || 'General Maintenance'
+        if (filter !== 'ALL' && cat !== filter) return
 
         let rawItems = []
         if (Array.isArray(record.image_urls) && record.image_urls.length > 0) {
             rawItems.push(...record.image_urls)
         }
-        if (record.after_image_url) {
-            rawItems.push({ url: record.after_image_url, label: 'After' })
-        }
-        if (record.before_image_url) {
-            rawItems.push({ url: record.before_image_url, label: 'Before' })
-        }
+        if (record.after_image_url) rawItems.push({ url: record.after_image_url, label: 'After' })
+        if (record.before_image_url) rawItems.push({ url: record.before_image_url, label: 'Before' })
 
-        rawItems.forEach((item) => {
+        rawItems.forEach((item, index) => {
             const parsed = parseAdminPhotoItem(item)
-            if (parsed && parsed.url) {
+            if (parsed && parsed.url && typeof parsed.url === 'string' && parsed.url.startsWith('http')) {
                 displayPhotos.push({
                     recordId: record.id,
-                    gallery: record.gallery || 'General Maintenance',
+                    gallery: cat,
                     url: parsed.url,
-                    label: parsed.label
+                    label: parsed.label,
+                    arrayIndex: index,
+                    totalInRecord: rawItems.length
                 })
             }
         })
@@ -681,15 +699,82 @@ function filterEntriesList() {
         return
     }
 
-    grid.innerHTML = displayPhotos.map(item => `
-        <div class="admin-photo-card">
-            <img src="${escapeHtml(item.url)}" alt="Uploaded photo">
-            <div class="admin-photo-overlay">
-                <span class="photo-category-pill">${escapeHtml(item.gallery)}${item.label ? ` • ${escapeHtml(item.label)}` : ''}</span>
-                <button class="delete-photo-btn" onclick="deleteIndividualPhoto('${escapeHtml(item.recordId)}', '${encodeURIComponent(item.url)}')" title="Delete photo">✕</button>
+    grid.innerHTML = displayPhotos.map((item) => {
+        const isFirst = item.arrayIndex === 0
+        const isLast = item.arrayIndex === item.totalInRecord - 1
+
+        return `
+            <div class="admin-photo-card">
+                <div class="admin-photo-reorder-bar">
+                    <span class="photo-order-badge">Slide #${item.arrayIndex + 1}</span>
+                    <div class="reorder-btn-group">
+                        ${!isFirst ? `<button class="reorder-btn" onclick="movePhotoOrder('${escapeHtml(item.recordId)}',${item.arrayIndex}, -1)" title="Move earlier in slideshow">◀</button>` : ''}
+                        ${!isFirst ? `<button class="reorder-btn" onclick="makePhotoFirst('${escapeHtml(item.recordId)}',${item.arrayIndex})" title="Set as Slide 1 / Cover">★ 1st</button>` : ''}
+                        ${!isLast ? `<button class="reorder-btn" onclick="movePhotoOrder('${escapeHtml(item.recordId)}',${item.arrayIndex}, 1)" title="Move later in slideshow">▶</button>` : ''}
+                    </div>
+                </div>
+
+                <img src="${escapeHtml(item.url)}" alt="Uploaded photo">
+
+                <div class="admin-photo-overlay">
+                    <span class="photo-category-pill">${escapeHtml(item.gallery)}${item.label ? ` • ${escapeHtml(item.label)}` : ''}</span>
+                    <button class="delete-photo-btn" onclick="deleteIndividualPhoto('${escapeHtml(item.recordId)}', '${encodeURIComponent(item.url)}')" title="Delete photo">✕</button>
+                </div>
             </div>
-        </div>
-    `).join('')
+        `
+    }).join('')
+}
+
+// ── Move Photo Left/Right within its record ──
+window.movePhotoOrder = async function(recordId, index, direction) {
+    const record = allPortfolioRecords.find(r => r.id == recordId)
+    if (!record || !Array.isArray(record.image_urls)) return
+
+    const newIndex = index + direction
+    if (newIndex < 0 || newIndex >= record.image_urls.length) return
+
+    const updated = [...record.image_urls]
+    const temp = updated[index]
+    updated[index] = updated[newIndex]
+    updated[newIndex] = temp
+
+    // Save ordered array to Supabase
+    const { error } = await supabaseClient
+        .from('portfolio')
+        .update({ image_urls: updated })
+        .eq('id', recordId)
+
+    if (error) {
+        alert('Could not update order: ' + error.message)
+        return
+    }
+
+    record.image_urls = updated
+    filterEntriesList()
+}
+
+// ── Make Photo First (Slide 1 / Cover) ──
+window.makePhotoFirst = async function(recordId, index) {
+    const record = allPortfolioRecords.find(r => r.id == recordId)
+    if (!record || !Array.isArray(record.image_urls)) return
+    if (index === 0) return
+
+    const updated = [...record.image_urls]
+    const [selected] = updated.splice(index, 1)
+    updated.unshift(selected)
+
+    const { error } = await supabaseClient
+        .from('portfolio')
+        .update({ image_urls: updated })
+        .eq('id', recordId)
+
+    if (error) {
+        alert('Could not set cover image: ' + error.message)
+        return
+    }
+
+    record.image_urls = updated
+    filterEntriesList()
 }
 
 async function deleteIndividualPhoto(recordId, encodedUrl) {

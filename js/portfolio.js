@@ -39,7 +39,6 @@ function extractPhotoDetails(item) {
                     return { url: String(parsed.url).trim(), label: parsed.label || '' };
                 }
             } catch (e) {
-                // Fallback regex if JSON was malformed by escaping
                 const urlMatch = trimmed.match(/"url"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
                 const labelMatch = trimmed.match(/"label"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
                 if (urlMatch && urlMatch[1]) {
