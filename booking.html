@@ -5,10 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book a Service | Jebbett Gardening</title>
-    <meta name="description"
-        content="Book a gardening service with Jebbett Gardening online. Choose your service, date and time and we'll be in touch to confirm.">
-    <meta property="og:title" content="Book a Service | Jebbett Gardening">
-    <meta property="og:url" content="https://jebbettgardeningsolutions.co.uk/booking.html">
+    <meta name="description" content="Book professional lawn cutting, hedge trimming, garden clearance, or maintenance in East Sussex.">
     <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -41,82 +38,108 @@
     <main>
 
         <section class="page-hero">
-            <h1>Book a Service</h1>
-            <p>Select a date and fill in your details — we'll confirm your appointment shortly.</p>
+            <h1>Book a Gardening Service</h1>
+            <p>Fill in your details below and we will confirm your appointment within 24 hours.</p>
         </section>
 
         <section class="booking-section">
+            <div class="booking-form-container">
+                <form id="booking-form" novalidate>
 
-            <!-- Step 1: Date Picker -->
-            <div class="booking-step" id="step-1">
-                <h2>Step 1 — Choose a Date</h2>
-                <div class="calendar-nav">
-                    <button id="prev-month">&#8592;</button>
-                    <span id="calendar-title"></span>
-                    <button id="next-month">&#8594;</button>
-                </div>
-                <div class="calendar-grid" id="calendar-grid">
-                    <div class="calendar-day-header">Mon</div>
-                    <div class="calendar-day-header">Tue</div>
-                    <div class="calendar-day-header">Wed</div>
-                    <div class="calendar-day-header">Thu</div>
-                    <div class="calendar-day-header">Fri</div>
-                    <div class="calendar-day-header">Sat</div>
-                    <div class="calendar-day-header">Sun</div>
-                </div>
+                    <!-- Anti-Bot Honeypot (Invisible to humans, irresistible to bots) -->
+                    <div style="position: absolute; left: -9999px; top: -9999px; opacity: 0; pointer-events: none;" aria-hidden="true">
+                        <label for="company_website">Company Website (leave blank)</label>
+                        <input type="text" id="company_website" name="company_website" tabindex="-1" autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="full_name">Full Name <span class="req">*</span></label>
+                        <input type="text" id="full_name" name="full_name" placeholder="e.g. John Smith" required>
+                        <span class="field-error" id="err-full_name"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">UK Phone Number <span class="req">*</span></label>
+                        <input type="tel" id="phone" name="phone" placeholder="e.g. 07123 456789 or 01323 123456" required>
+                        <span class="field-error" id="err-phone"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address <span class="req">*</span></label>
+                        <input type="email" id="email" name="email" placeholder="e.g. john@example.co.uk" required>
+                        <span class="field-error" id="err-email"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Property Address &amp; Postcode <span class="req">*</span></label>
+                        <input type="text" id="address" name="address" placeholder="e.g. 14 High Street, Eastbourne, BN21 4TL" required>
+                        <span class="field-error" id="err-address"></span>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half-width">
+                            <label for="service_type">Service Required <span class="req">*</span></label>
+                            <select id="service_type" name="service_type" required>
+                                <option value="">Select a service...</option>
+                                <option value="lawn-cuts">Lawn Cuts</option>
+                                <option value="hedge-trimming">Hedge Trimming</option>
+                                <option value="garden-clearance">Garden Clearance</option>
+                                <option value="planting-borders">Planting &amp; Borders</option>
+                                <option value="general-maintenance">General Maintenance</option>
+                            </select>
+                            <span class="field-error" id="err-service_type"></span>
+                        </div>
+
+                        <div class="form-group half-width">
+                            <label for="preferred_time">Preferred Time Slot <span class="req">*</span></label>
+                            <select id="preferred_time" name="preferred_time" required>
+                                <option value="">Select time slot...</option>
+                                <option value="Morning (08:00 - 12:00)">Morning (08:00 - 12:00)</option>
+                                <option value="Afternoon (12:00 - 16:00)">Afternoon (12:00 - 16:00)</option>
+                                <option value="Flexible (All Day)">Flexible (All Day)</option>
+                            </select>
+                            <span class="field-error" id="err-preferred_time"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="preferred_date">Preferred Date <span class="req">*</span></label>
+                        <input type="date" id="preferred_date" name="preferred_date" required>
+                        <span class="field-error" id="err-preferred_date"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Job Instructions / Garden Details <span class="opt">(Optional)</span></label>
+                        <textarea id="notes" name="notes" rows="4" placeholder="Tell us about gate access, current condition of the lawn or hedges, green waste removal, etc."></textarea>
+                    </div>
+
+                    <div id="form-general-error" class="form-banner-error" style="display:none;"></div>
+
+                    <button type="submit" class="btn btn-submit-booking" id="submit-booking-btn">
+                        Submit Booking Request &rarr;
+                    </button>
+
+                </form>
             </div>
-
-            <!-- Step 2: Time Slot -->
-            <div class="booking-step" id="step-2" style="display:none;">
-                <h2>Step 2 — Choose a Time</h2>
-                <p id="selected-date-display"></p>
-                <div class="time-slots" id="time-slots"></div>
-                <button class="btn-outline" id="back-to-step-1">← Back</button>
-            </div>
-
-            <!-- Step 3: Your Details -->
-            <div class="booking-step" id="step-3" style="display:none;">
-                <h2>Step 3 — Your Details</h2>
-                <p id="selected-slot-display"></p>
-                <div class="form-group">
-                    <label for="full-name">Full Name</label>
-                    <input type="text" id="full-name" placeholder="Your full name">
-                </div>
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" placeholder="Your email">
-                </div>
-                <div class="form-group">
-                    <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" placeholder="Your phone number">
-                </div>
-                <div class="form-group">
-                    <label for="service">Service Required</label>
-                    <select id="service">
-                        <option value="">-- Select a service --</option>
-                        <option value="lawn-mowing">Lawn Mowing</option>
-                        <option value="hedge-trimming">Hedge Trimming</option>
-                        <option value="garden-clearance">Garden Clearance</option>
-                        <option value="regular-maintenance">Regular Maintenance</option>
-                        <option value="planting-and-borders">Planting &amp; Borders</option>
-                        <option value="one-off-tidy">One-Off Tidy Up</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="address">Address</label>
-                    <input type="text" id="address" placeholder="Your address">
-                </div>
-                <div class="form-group">
-                    <label for="notes">Additional Notes</label>
-                    <textarea id="notes" rows="4" placeholder="Any extra details about the job..."></textarea>
-                </div>
-                <div class="booking-form-actions">
-                    <button class="btn-outline" id="back-to-step-2">← Back</button>
-                    <button class="btn" id="submit-booking">Submit Booking</button>
-                </div>
-            </div>
-
         </section>
+
+        <!-- Booking Confirmation Success Modal -->
+        <div id="booking-success-modal" class="booking-modal-overlay" style="display:none;">
+            <div class="booking-modal-card">
+                <div class="modal-check-circle">✓</div>
+                <h2>Booking Request Received!</h2>
+                <p>Thank you for choosing Jebbett Gardening. Your reference code is:</p>
+                <div class="modal-ref-display" id="modal-ref-code">#JEB-000</div>
+                <div class="modal-details-summary">
+                    <p><strong>Service:</strong> <span id="modal-summary-service"></span></p>
+                    <p><strong>Appointment Date:</strong> <span id="modal-summary-date"></span></p>
+                    <p><strong>Time Slot:</strong> <span id="modal-summary-time"></span></p>
+                    <p><strong>Address:</strong> <span id="modal-summary-address"></span></p>
+                </div>
+                <p class="modal-note">A confirmation email has been sent. Jack will contact you shortly to confirm gate access and arrival time.</p>
+                <button class="btn" onclick="closeSuccessModal()">Done</button>
+            </div>
+        </div>
 
     </main>
 
@@ -141,7 +164,6 @@
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
     <script src="js/booking.js"></script>

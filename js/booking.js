@@ -1,338 +1,229 @@
-// ── Check if user is logged in ──
-async function checkAuth() {
-    const { data: { session } } = await supabaseClient.auth.getSession()
-    if (!session) {
-        // Carry current query parameters (e.g. ?service=...) through the login redirect
-        const redirectParam = encodeURIComponent('booking.html' + window.location.search)
-        window.location.href = `login.html?redirect=${redirectParam}`
-        return false
+// Pre-fill service from URL query params (e.g. booking.html?service=lawn-cuts)
+document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const serviceParam = urlParams.get('service');
+    if (serviceParam) {
+        const select = document.getElementById('service_type');
+        if (select) select.value = serviceParam;
     }
-    return true
+
+    // Lock date input to minimum tomorrow (no past dates or same-day)
+    const dateInput = document.getElementById('preferred_date');
+    if (dateInput) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const yyyy = tomorrow.getFullYear();
+        const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const dd = String(tomorrow.getDate()).padStart(2, '0');
+        dateInput.min = `${yyyy}-${mm}-${dd}`;
+    }
+});
+
+// ── Validation Helpers ──
+function isValidFullName(name) {
+    // Requires at least first name and last name (2 words, min 2 letters each)
+    const trimmed = name.trim();
+    const parts = trimmed.split(/\s+/);
+    if (parts.length < 2) return false;
+    return parts.every(part => part.length >= 2 && /^[a-zA-Z'-\.]+$/.test(part));
 }
 
-// ── Auto-select service from URL parameter (e.g. ?service=lawn-mowing) ──
-function preselectServiceFromUrl() {
-    const params = new URLSearchParams(window.location.search)
-    const requestedService = params.get('service')
+function isValidUKPhone(phone) {
+    // Cleans spaces/hyphens: matches UK mobile (07xxx) or landline (01xxx, 02xxx) or +44
+    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    const ukPhoneRegex = /^(?:(?:\+44\s?|0)(?:7\d{3}|1\d{3}|2\d{3}|3\d{3}|8\d{3})\s?\d{6}|(?:\+44\s?|0)\d{10,11})$/;
+    return ukPhoneRegex.test(cleaned) && cleaned.length >= 10 && cleaned.length <= 13;
+}
 
-    if (!requestedService) return
+function isValidEmail(email) {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email.trim());
+}
 
-    const select = document.getElementById('service')
-    if (!select) return
+function isValidUKAddress(address) {
+    const trimmed = address.trim();
+    // Must be at least 8 characters and contain street + UK Postcode pattern
+    if (trimmed.length < 8) return false;
+    const ukPostcodeRegex = /([Gg][Ii][Rr] 0[Aa]{2})|((([A-Za-z][0-9]{1,2})|(([A-Za-z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Za-z][0-9][A-Za-z])|([A-Za-z][A-Ha-hJ-Yj-y][0-9][A-Za-z]?))))\s?[0-9][A-Za-z]{2})/;
+    return ukPostcodeRegex.test(trimmed);
+}
 
-    const target = requestedService.toLowerCase().trim()
+function clearErrors() {
+    document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+    document.querySelectorAll('.form-group input, .form-group select').forEach(el => el.classList.remove('input-invalid'));
+    const banner = document.getElementById('form-general-error');
+    if (banner) {
+        banner.style.display = 'none';
+        banner.textContent = '';
+    }
+}
 
-    // 1. Exact value match
-    for (let opt of select.options) {
-        if (opt.value.toLowerCase() === target) {
-            select.value = opt.value
-            return
+function setError(fieldId, message) {
+    const errSpan = document.getElementById(`err-${fieldId}`);
+    const input = document.getElementById(fieldId);
+    if (errSpan) errSpan.textContent = message;
+    if (input) input.classList.add('input-invalid');
+}
+
+// ── Form Submission Handler ──
+const bookingForm = document.getElementById('booking-form');
+
+if (bookingForm) {
+    bookingForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearErrors();
+
+        // 1. Invisible Honeypot Check (Blocks Automated Bots Silently)
+        const honeypot = document.getElementById('company_website')?.value;
+        if (honeypot && honeypot.trim() !== '') {
+            console.warn('Spam bot submission blocked.');
+            // Fake success response to confuse the bot script without doing anything
+            alert('Booking received!');
+            bookingForm.reset();
+            return;
         }
-    }
 
-    // 2. Fuzzy match fallback
-    for (let opt of select.options) {
-        const text = opt.textContent.toLowerCase()
-        const val = opt.value.toLowerCase()
+        // 2. Extract values
+        const fullName = document.getElementById('full_name').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const address = document.getElementById('address').value.trim();
+        const serviceType = document.getElementById('service_type').value;
+        const preferredTime = document.getElementById('preferred_time').value;
+        const preferredDate = document.getElementById('preferred_date').value;
+        const notes = document.getElementById('notes').value.trim();
 
-        if (
-            (target.includes('lawn') && (text.includes('lawn') || val.includes('lawn'))) ||
-            (target.includes('hedge') && (text.includes('hedge') || val.includes('hedge'))) ||
-            (target.includes('clearance') && (text.includes('clearance') || val.includes('clearance'))) ||
-            ((target.includes('plant') || target.includes('border') || target.includes('bed')) && 
-             (text.includes('plant') || text.includes('border') || val.includes('plant') || val.includes('border'))) ||
-            (target.includes('maintenance') && (text.includes('maintenance') || val.includes('maintenance')))
-        ) {
-            select.value = opt.value
-            return
+        let hasError = false;
+
+        // 3. Strict Validation Checks
+        if (!fullName) {
+            setError('full_name', 'Full name is required.');
+            hasError = true;
+        } else if (!isValidFullName(fullName)) {
+            setError('full_name', 'Please provide both your first and last name.');
+            hasError = true;
         }
-    }
-}
 
-// ── Form validation ──
-function validateEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return re.test(email)
-}
-
-function validatePhone(phone) {
-    const re = /^[\d\s\-\+\(\)]{10,}$/
-    return re.test(phone.trim())
-}
-
-function validateForm(fullName, email, phone, serviceType, address) {
-    if (!fullName || fullName.trim() === '') {
-        alert('Please enter your full name')
-        return false
-    }
-    if (!email || !validateEmail(email)) {
-        alert('Please enter a valid email address')
-        return false
-    }
-    if (!phone || !validatePhone(phone)) {
-        alert('Please enter a valid phone number')
-        return false
-    }
-    if (!serviceType || serviceType === '') {
-        alert('Please select a service')
-        return false
-    }
-    if (!address || address.trim() === '') {
-        alert('Please enter your address')
-        return false
-    }
-    return true
-}
-
-// ── Booking Calendar ──
-
-const today = new Date()
-today.setHours(0, 0, 0, 0)
-
-let currentMonth = today.getMonth()
-let currentYear = today.getFullYear()
-let selectedDate = null
-let selectedTime = null
-let bookedCounts = {}
-
-// ── Capacity per day ──
-function getCapacity(date) {
-    const day = date.getDay()
-    if (day === 1 || day === 2 || day === 3 || day === 4) return 2
-    if (day === 5) return 8
-    if (day === 6 || day === 0) return 6
-    return 0
-}
-
-// ── Time slots per day ──
-function getTimeSlots(date) {
-    const day = date.getDay()
-    if (day === 1 || day === 2 || day === 3 || day === 4) {
-        return ['9:00am – 10:30am', '11:00am – 12:30pm']
-    }
-    if (day === 5) {
-        return ['8:00am – 9:30am', '9:30am – 11:00am', '11:00am – 12:30pm', '12:30pm – 2:00pm', '2:00pm – 3:30pm', '3:30pm – 5:00pm']
-    }
-    if (day === 6 || day === 0) {
-        return ['7:00am – 8:30am', '8:30am – 10:00am', '10:00am – 11:30am', '11:30am – 1:00pm', '1:00pm – 2:30pm', '2:30pm – 4:00pm']
-    }
-    return []
-}
-
-// ── Load booked counts from Supabase ──
-async function loadBookedCounts() {
-    const { data, error } = await supabaseClient
-        .from('bookings')
-        .select('preferred_date, preferred_time')
-        .neq('status', 'cancelled')
-
-    if (error || !data) return
-
-    bookedCounts = {}
-    data.forEach(b => {
-        if (!bookedCounts[b.preferred_date]) {
-            bookedCounts[b.preferred_date] = {}
+        if (!phone) {
+            setError('phone', 'Phone number is required.');
+            hasError = true;
+        } else if (!isValidUKPhone(phone)) {
+            setError('phone', 'Please enter a valid UK phone number (e.g. 07123 456789).');
+            hasError = true;
         }
-        const time = b.preferred_time || 'flexible'
-        bookedCounts[b.preferred_date][time] = (bookedCounts[b.preferred_date][time] || 0) + 1
-    })
-}
 
-// ── Render calendar ──
-function renderCalendar() {
-    const grid = document.getElementById('calendar-grid')
-    const title = document.getElementById('calendar-title')
+        if (!email) {
+            setError('email', 'Email address is required.');
+            hasError = true;
+        } else if (!isValidEmail(email)) {
+            setError('email', 'Please enter a valid email address.');
+            hasError = true;
+        }
 
-    const headers = grid.querySelectorAll('.calendar-day-header')
-    grid.innerHTML = ''
-    headers.forEach(h => grid.appendChild(h))
+        if (!address) {
+            setError('address', 'Property address and postcode are required.');
+            hasError = true;
+        } else if (!isValidUKAddress(address)) {
+            setError('address', 'Please include your street address and a valid UK postcode (e.g. BN21 4TL).');
+            hasError = true;
+        }
 
-    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December']
-    title.textContent = `${monthNames[currentMonth]} ${currentYear}`
+        if (!serviceType) {
+            setError('service_type', 'Please select a service.');
+            hasError = true;
+        }
 
-    const firstDay = new Date(currentYear, currentMonth, 1)
-    const lastDay = new Date(currentYear, currentMonth + 1, 0)
+        if (!preferredTime) {
+            setError('preferred_time', 'Please select a preferred time slot.');
+            hasError = true;
+        }
 
-    let startOffset = firstDay.getDay() - 1
-    if (startOffset < 0) startOffset = 6
-
-    const maxDate = new Date(today)
-    maxDate.setDate(maxDate.getDate() + 35)
-
-    for (let i = 0; i < startOffset; i++) {
-        const empty = document.createElement('div')
-        empty.classList.add('calendar-cell', 'empty')
-        grid.appendChild(empty)
-    }
-
-    for (let d = 1; d <= lastDay.getDate(); d++) {
-        const date = new Date(currentYear, currentMonth, d)
-        const dateStr = date.toISOString().split('T')[0]
-        const capacity = getCapacity(date)
-        const booked = bookedCounts[dateStr] ? Object.values(bookedCounts[dateStr]).reduce((a, b) => a + b, 0) : 0
-        const isPast = date <= today
-        const isTooFar = date > maxDate
-        const isFull = booked >= capacity
-
-        const cell = document.createElement('div')
-        cell.classList.add('calendar-cell')
-        cell.textContent = d
-
-        if (isPast || isTooFar || isFull) {
-            cell.classList.add('unavailable')
+        if (!preferredDate) {
+            setError('preferred_date', 'Please choose an appointment date.');
+            hasError = true;
         } else {
-            cell.classList.add('available')
-            cell.addEventListener('click', () => selectDate(date, dateStr))
+            const selected = new Date(preferredDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (selected <= today) {
+                setError('preferred_date', 'Please select a date from tomorrow onwards.');
+                hasError = true;
+            }
         }
 
-        if (selectedDate === dateStr) {
-            cell.classList.add('selected')
+        if (hasError) {
+            const banner = document.getElementById('form-general-error');
+            if (banner) {
+                banner.textContent = 'Please correct the highlighted fields above before submitting.';
+                banner.style.display = 'block';
+            }
+            return;
         }
 
-        grid.appendChild(cell)
-    }
-}
+        // 4. Submission to Supabase
+        const submitBtn = document.getElementById('submit-booking-btn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting Booking...';
 
-// ── Select a date ──
-function selectDate(date, dateStr) {
-    selectedDate = dateStr
-    renderCalendar()
+        try {
+            // Count existing bookings to display sequential reference code
+            const { count } = await supabaseClient
+                .from('bookings')
+                .select('*', { count: 'exact', head: true });
 
-    document.getElementById('step-1').style.display = 'none'
-    document.getElementById('step-2').style.display = 'block'
+            const nextSeq = (count || 0) + 1;
+            const refCode = `#JEB-${String(nextSeq).padStart(3, '0')}`;
 
-    const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
-    document.getElementById('selected-date-display').textContent = `Selected: ${date.toLocaleDateString('en-GB', options)}`
+            const { data, error } = await supabaseClient
+                .from('bookings')
+                .insert([{
+                    full_name: fullName,
+                    phone: phone,
+                    email: email,
+                    address: address,
+                    service_type: serviceType,
+                    preferred_time: preferredTime,
+                    preferred_date: preferredDate,
+                    notes: notes || null,
+                    status: 'pending',
+                    created_at: new Date().toISOString()
+                }])
+                .select();
 
-    const slots = getTimeSlots(date)
-    const bookedSlots = bookedCounts[dateStr] || {}
-    const slotsContainer = document.getElementById('time-slots')
-    slotsContainer.innerHTML = ''
+            if (error) throw error;
 
-    slots.forEach(slot => {
-        const count = bookedSlots[slot] || 0
-        const capacity = getCapacity(date)
-        const slotsFull = count >= Math.ceil(capacity / slots.length)
+            // Show Confirmation Modal
+            showSuccessModal(refCode, serviceType, preferredDate, preferredTime, address);
+            bookingForm.reset();
 
-        const btn = document.createElement('button')
-        btn.classList.add('time-slot-btn')
-        btn.textContent = slot
-
-        if (slotsFull) {
-            btn.classList.add('slot-full')
-            btn.disabled = true
-            btn.textContent += ' — Full'
-        } else {
-            btn.addEventListener('click', () => selectTime(slot, btn))
+        } catch (err) {
+            console.error('Booking submission error:', err);
+            const banner = document.getElementById('form-general-error');
+            if (banner) {
+                banner.textContent = 'Could not submit your booking: ' + (err.message || 'Please check your connection and try again.');
+                banner.style.display = 'block';
+            }
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Booking Request →';
         }
-
-        slotsContainer.appendChild(btn)
-    })
+    });
 }
 
-// ── Select a time ──
-function selectTime(time, btn) {
-    selectedTime = time
-    document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected'))
-    btn.classList.add('selected')
+function showSuccessModal(ref, service, date, time, address) {
+    document.getElementById('modal-ref-code').textContent = ref;
+    document.getElementById('modal-summary-service').textContent = service.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    document.getElementById('modal-summary-date').textContent = new Date(date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    document.getElementById('modal-summary-time').textContent = time;
+    document.getElementById('modal-summary-address').textContent = address;
 
-    setTimeout(() => {
-        document.getElementById('step-2').style.display = 'none'
-        document.getElementById('step-3').style.display = 'block'
-        document.getElementById('selected-slot-display').textContent = `📅 ${selectedDate} at ${selectedTime}`
-    }, 300)
+    const modal = document.getElementById('booking-success-modal');
+    if (modal) modal.style.display = 'flex';
 }
 
-// ── Navigation ──
-document.getElementById('prev-month').addEventListener('click', () => {
-    currentMonth--
-    if (currentMonth < 0) { currentMonth = 11; currentYear-- }
-    renderCalendar()
-})
-
-document.getElementById('next-month').addEventListener('click', () => {
-    currentMonth++
-    if (currentMonth > 11) { currentMonth = 0; currentYear++ }
-    renderCalendar()
-})
-
-document.getElementById('back-to-step-1').addEventListener('click', () => {
-    document.getElementById('step-2').style.display = 'none'
-    document.getElementById('step-1').style.display = 'block'
-})
-
-document.getElementById('back-to-step-2').addEventListener('click', () => {
-    document.getElementById('step-3').style.display = 'none'
-    document.getElementById('step-2').style.display = 'block'
-})
-
-// ── Submit booking ──
-async function handleBooking() {
-    const fullName = document.getElementById('full-name').value
-    const email = document.getElementById('email').value
-    const phone = document.getElementById('phone').value
-    const serviceType = document.getElementById('service').value
-    const address = document.getElementById('address').value
-    const notes = document.getElementById('notes').value
-
-    if (!validateForm(fullName, email, phone, serviceType, address)) {
-        return
-    }
-
-    if (!selectedDate || !selectedTime) {
-        alert('Please select a date and time')
-        return
-    }
-
-    const { data: { session } } = await supabaseClient.auth.getSession()
-    const userId = session ? session.user.id : null
-
-    const { error } = await supabaseClient
-        .from('bookings')
-        .insert([{
-            user_id: userId,
-            full_name: fullName,
-            email: email,
-            phone: phone,
-            service_type: serviceType,
-            preferred_date: selectedDate,
-            preferred_time: selectedTime,
-            address: address,
-            notes: notes,
-            status: 'pending'
-        }])
-
-    if (error) {
-        alert('Something went wrong: ' + error.message)
-    } else {
-        // ── Send email notification ──
-        emailjs.init('ohlaxkcgROilotg3E')
-        emailjs.send('service_6gw0lzk', 'template_7ebfhkm', {
-            full_name: fullName,
-            email: email,
-            phone: phone || 'Not provided',
-            service_type: serviceType,
-            preferred_date: selectedDate,
-            preferred_time: selectedTime,
-            address: address,
-            notes: notes || 'None'
-        })
-
-        alert('Booking request received! We will be in touch to confirm.')
-        window.location.href = 'index.html'
-    }
+function closeSuccessModal() {
+    const modal = document.getElementById('booking-success-modal');
+    if (modal) modal.style.display = 'none';
+    window.location.href = 'index.html';
 }
-
-document.getElementById('submit-booking').addEventListener('click', handleBooking)
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleBooking()
-})
-
-// ── Init ──
-checkAuth().then(isAuth => {
-    if (isAuth) {
-        preselectServiceFromUrl()
-        loadBookedCounts().then(renderCalendar)
-    }
-})
+window.closeSuccessModal = closeSuccessModal;
