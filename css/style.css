@@ -2040,3 +2040,64 @@ footer {
         text-align: center;
     }
 }
+
+
+
+/* ── About Section Fix (Homepage Layout) ── */
+.about-section,
+.about-snippet-section {
+    background-color: #f7f9f6;
+    padding: 70px 20px;
+    border-top: 1px solid #e2e8de;
+    border-bottom: 1px solid #e2e8de;
+    width: 100%;
+}
+
+.about-container,
+.about-snippet-container,
+.about-content {
+    max-width: 860px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 0 15px;
+}
+
+.about-container h2,
+.about-snippet-content h2,
+.about-section h2 {
+    font-size: 32px;
+    color: #1f2b20;
+    margin-bottom: 18px;
+}
+
+.about-container p,
+.about-snippet-content p,
+.about-section p {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #444;
+    margin-bottom: 16px;
+}
+
+.about-tag,
+.about-section .about-tag {
+    display: inline-block;
+    background: #e6f0e2;
+    color: #2d5a27;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 15px;
+}
+
+.about-actions,
+.about-snippet-actions {
+    margin-top: 25px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
