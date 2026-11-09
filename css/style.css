@@ -2181,3 +2181,137 @@ footer {
 
     .booking-form-container { padding: 24px 18px; }
 }
+
+/* ── 8. Admin panel (cont.) ── */
+.folder-tab {
+    background: #d8ded4;
+    border: 1px solid #c2c9bd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #444;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.folder-tab:hover {
+    background: #e4e9e0;
+    color: #111;
+}
+
+.folder-tab.active {
+    background: #fff;
+    color: var(--green);
+    border-color: #d3d8cf;
+    border-bottom: 1px solid #fff;
+    margin-bottom: -1px;
+    font-weight: 700;
+}
+
+.archive-folder-body {
+    background: #fff;
+    padding: 20px;
+}
+
+.archive-table-wrapper {
+    overflow-x: auto;
+}
+
+.archive-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    text-align: left;
+}
+
+.archive-table th {
+    background: #f4f6f2;
+    color: #333;
+    padding: 12px 14px;
+    font-weight: 700;
+    border-bottom: 2px solid #e1e6de;
+}
+
+.archive-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #eee;
+    color: var(--text);
+}
+
+.archive-table tr:hover td {
+    background: #fafcf8;
+}
+
+/* ── 9. Responsive ── */
+@media (max-width: 900px) {
+    header {
+        padding: 15px 20px;
+    }
+
+    .hamburger {
+        display: flex;
+    }
+
+    nav {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: var(--green-dark);
+        flex-direction: column;
+        align-items: center;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    }
+
+    nav.active {
+        max-height: 400px;
+    }
+
+    nav ul {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 30px 0;
+        width: 100%;
+    }
+
+    .why-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .contact-section {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+}
+
+@media (max-width: 600px) {
+    .hero h1 {
+        font-size: 36px;
+    }
+
+    .hero p {
+        font-size: 16px;
+    }
+
+    .why-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    #cookie-notice {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 15px 20px;
+    }
+}
