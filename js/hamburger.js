@@ -1,16 +1,35 @@
-// ── Hamburger Menu ──
+
+ // ── Hamburger Menu ──
 const hamburger = document.getElementById('hamburger')
 const nav = document.getElementById('main-nav')
 
-if (hamburger) {
+if (hamburger && nav) {
     hamburger.addEventListener('click', () => {
-        nav.classList.toggle('open')
+        const isOpen = nav.classList.toggle('open')
+        hamburger.setAttribute('aria-expanded', String(isOpen))
     })
 
     // Close nav when a link is clicked
-    document.querySelectorAll('#main-nav a').forEach(link => {
+    nav.querySelectorAll('a').forEach(link => {
         link.addEventListener('click', () => {
             nav.classList.remove('open')
+            hamburger.setAttribute('aria-expanded', 'false')
         })
+    })
+
+    // Close nav when clicking outside the menu
+    document.addEventListener('click', (event) => {
+        if (!nav.contains(event.target) && !hamburger.contains(event.target)) {
+            nav.classList.remove('open')
+            hamburger.setAttribute('aria-expanded', 'false')
+        }
+    })
+
+    // Close nav when Escape is pressed
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            nav.classList.remove('open')
+            hamburger.setAttribute('aria-expanded', 'false')
+        }
     })
 }

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -17,7 +18,7 @@
                 <img src="images/jebbett-logo.jpeg" alt="Jebbett Gardening Logo">
             </a>
         </div>
-        <button class="hamburger" id="hamburger">
+        <button class="hamburger" id="hamburger" type="button" aria-label="Toggle navigation menu" aria-controls="main-nav" aria-expanded="false">
             <span></span>
             <span></span>
             <span></span>
@@ -81,11 +82,12 @@
                             <label for="service_type">Service Required <span class="req">*</span></label>
                             <select id="service_type" name="service_type" required>
                                 <option value="">Select a service...</option>
-                                <option value="lawn-cuts">Lawn Cuts</option>
+                                <option value="lawn-cuts">Lawn Mowing</option>
                                 <option value="hedge-trimming">Hedge Trimming</option>
                                 <option value="garden-clearance">Garden Clearance</option>
                                 <option value="planting-borders">Planting &amp; Borders</option>
-                                <option value="general-maintenance">General Maintenance</option>
+                                <option value="general-maintenance">Regular Maintenance</option>
+                                <option value="one-off-tidy">One-Off Tidy Ups</option>
                             </select>
                             <span class="field-error" id="err-service_type"></span>
                         </div>
