@@ -1,186 +1,260 @@
-// Pre-fill service from URL query params (e.g. booking.html?service=lawn-cuts)
+
+'use strict';
+
+// =====================================================
+// Jebbett Gardening Solutions - Booking Requests
+// =====================================================
+
+// Calculate tomorrow's date in local time.
+function tomorrowISO() {
+    const date = new Date();
+
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() + 1);
+
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// Prevent requests for today or earlier.
+function updateMinimumBookingDate() {
+    const input = document.getElementById('preferred_date');
+
+    if (input) {
+        input.min = tomorrowISO();
+    }
+}
+
+// Preselect a service when arriving from the Services page.
 document.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const serviceParam = urlParams.get('service');
-    if (serviceParam) {
-        const select = document.getElementById('service_type');
-        if (select) select.value = serviceParam;
+    const service = new URLSearchParams(window.location.search).get('service');
+    const select = document.getElementById('service_type');
+
+    if (
+        service &&
+        select &&
+        Array.from(select.options).some(option => option.value === service)
+    ) {
+        select.value = service;
     }
 
-    // Lock date input to minimum tomorrow (no past dates or same-day)
-    const dateInput = document.getElementById('preferred_date');
-    if (dateInput) {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const yyyy = tomorrow.getFullYear();
-        const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
-        const dd = String(tomorrow.getDate()).padStart(2, '0');
-        dateInput.min = `${yyyy}-${mm}-${dd}`;
-    }
+    updateMinimumBookingDate();
 });
 
-// ── Validation Helpers ──
+// =====================================================
+// Field validation
+// =====================================================
+
 function isValidFullName(name) {
-    // Requires at least first name and last name (2 words, min 2 letters each)
-    const trimmed = name.trim();
-    const parts = trimmed.split(/\s+/);
-    if (parts.length < 2) return false;
-    return parts.every(part => part.length >= 2 && /^[a-zA-Z'-\.]+$/.test(part));
+    const parts = name.trim().split(/\s+/);
+
+    return parts.length >= 2 &&
+        parts.every(part =>
+            part.length >= 2 &&
+            /^[a-zA-Z'\-.]+$/.test(part)
+        );
 }
 
 function isValidUKPhone(phone) {
-    // Cleans spaces/hyphens: matches UK mobile (07xxx) or landline (01xxx, 02xxx) or +44
-    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
-    const ukPhoneRegex = /^(?:(?:\+44\s?|0)(?:7\d{3}|1\d{3}|2\d{3}|3\d{3}|8\d{3})\s?\d{6}|(?:\+44\s?|0)\d{10,11})$/;
-    return ukPhoneRegex.test(cleaned) && cleaned.length >= 10 && cleaned.length <= 13;
+    const cleaned = phone.replace(/[\s\-()]/g, '');
+
+    return /^(?:\+44\d{10}|0\d{10})$/.test(cleaned);
 }
 
 function isValidEmail(email) {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return emailRegex.test(email.trim());
+    return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
+        email.trim()
+    );
 }
 
 function isValidUKAddress(address) {
-    const trimmed = address.trim();
-    // Must be at least 8 characters and contain street + UK Postcode pattern
-    if (trimmed.length < 8) return false;
-    const ukPostcodeRegex = /([Gg][Ii][Rr] 0[Aa]{2})|((([A-Za-z][0-9]{1,2})|(([A-Za-z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Za-z][0-9][A-Za-z])|([A-Za-z][A-Ha-hJ-Yj-y][0-9][A-Za-z]?))))\s?[0-9][A-Za-z]{2})/;
-    return ukPostcodeRegex.test(trimmed);
+    return address.trim().length >= 5 &&
+        /[a-zA-Z]/.test(address);
 }
 
+// Standardise UK postcode formatting.
+function formatUKPostcode(value) {
+    const compact = value
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '');
+
+    return compact.length >= 5
+        ? `${compact.slice(0, -3)} ${compact.slice(-3)}`
+        : compact;
+}
+
+function isValidUKPostcode(value) {
+    return /^(?:GIR 0AA|(?:[A-Z]{1,2}\d[A-Z\d]?) \d[A-Z]{2})$/.test(
+        formatUKPostcode(value)
+    );
+}
+
+// =====================================================
+// Validation error messages
+// =====================================================
+
 function clearErrors() {
-    document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
-    document.querySelectorAll('.form-group input, .form-group select').forEach(el => el.classList.remove('input-invalid'));
+    document.querySelectorAll('.field-error').forEach(el => {
+        el.textContent = '';
+    });
+
+    document.querySelectorAll(
+        '.form-group input, .form-group select'
+    ).forEach(el => {
+        el.classList.remove('input-invalid');
+    });
+
     const banner = document.getElementById('form-general-error');
+
     if (banner) {
         banner.style.display = 'none';
         banner.textContent = '';
     }
 }
 
-function setError(fieldId, message) {
-    const errSpan = document.getElementById(`err-${fieldId}`);
-    const input = document.getElementById(fieldId);
-    if (errSpan) errSpan.textContent = message;
-    if (input) input.classList.add('input-invalid');
+function setError(id, message) {
+    const span = document.getElementById(`err-${id}`);
+    const field = document.getElementById(id);
+
+    if (span) {
+        span.textContent = message;
+    }
+
+    if (field) {
+        field.classList.add('input-invalid');
+    }
 }
 
-// ── Form Submission Handler ──
+function showGeneralError(message) {
+    const banner = document.getElementById('form-general-error');
+
+    if (banner) {
+        banner.textContent = message;
+        banner.style.display = 'block';
+    }
+}
+
+// =====================================================
+// Booking form submission
+// =====================================================
+
 const bookingForm = document.getElementById('booking-form');
 
 if (bookingForm) {
-    bookingForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    bookingForm.addEventListener('submit', async event => {
+        event.preventDefault();
+
         clearErrors();
 
-        // 1. Invisible Honeypot Check (Blocks Automated Bots Silently)
-        const honeypot = document.getElementById('company_website')?.value;
-        if (honeypot && honeypot.trim() !== '') {
-            console.warn('Spam bot submission blocked.');
-            // Fake success response to confuse the bot script without doing anything
-            alert('Booking received!');
+        // Honeypot protection.
+        if (document.getElementById('company_website')?.value.trim()) {
             bookingForm.reset();
             return;
         }
 
-        // 2. Extract values
-        const fullName = document.getElementById('full_name').value.trim();
-        const phone = document.getElementById('phone').value.trim();
-        const email = document.getElementById('email').value.trim();
-        const address = document.getElementById('address').value.trim();
-        const serviceType = document.getElementById('service_type').value;
-        const preferredTime = document.getElementById('preferred_time').value;
-        const preferredDate = document.getElementById('preferred_date').value;
-        const notes = document.getElementById('notes').value.trim();
+        // Collect form values.
+        const value = id => document.getElementById(id).value.trim();
 
-        let hasError = false;
+        const fullName = value('full_name');
+        const phone = value('phone');
+        const email = value('email');
+        const streetAddress = value('address');
+        const postcodeInput = value('postcode');
+        const postcode = formatUKPostcode(postcodeInput);
 
-        // 3. Strict Validation Checks
-        if (!fullName) {
-            setError('full_name', 'Full name is required.');
-            hasError = true;
-        } else if (!isValidFullName(fullName)) {
-            setError('full_name', 'Please provide both your first and last name.');
-            hasError = true;
-        }
+        const serviceType = value('service_type');
+        const preferredTime = value('preferred_time');
+        const preferredDate = value('preferred_date');
+        const notes = value('notes');
 
-        if (!phone) {
-            setError('phone', 'Phone number is required.');
-            hasError = true;
-        } else if (!isValidUKPhone(phone)) {
-            setError('phone', 'Please enter a valid UK phone number (e.g. 07123 456789).');
-            hasError = true;
-        }
+        let invalid = false;
 
-        if (!email) {
-            setError('email', 'Email address is required.');
-            hasError = true;
-        } else if (!isValidEmail(email)) {
-            setError('email', 'Please enter a valid email address.');
-            hasError = true;
-        }
-
-        if (!address) {
-            setError('address', 'Property address and postcode are required.');
-            hasError = true;
-        } else if (!isValidUKAddress(address)) {
-            setError('address', 'Please include your street address and a valid UK postcode (e.g. BN21 4TL).');
-            hasError = true;
-        }
-
-        if (!serviceType) {
-            setError('service_type', 'Please select a service.');
-            hasError = true;
-        }
-
-        if (!preferredTime) {
-            setError('preferred_time', 'Please select a preferred time slot.');
-            hasError = true;
-        }
-
-        if (!preferredDate) {
-            setError('preferred_date', 'Please choose an appointment date.');
-            hasError = true;
-        } else {
-            const selected = new Date(preferredDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (selected <= today) {
-                setError('preferred_date', 'Please select a date from tomorrow onwards.');
-                hasError = true;
+        function check(id, condition, message) {
+            if (!condition) {
+                setError(id, message);
+                invalid = true;
             }
         }
 
-        if (hasError) {
-            const banner = document.getElementById('form-general-error');
-            if (banner) {
-                banner.textContent = 'Please correct the highlighted fields above before submitting.';
-                banner.style.display = 'block';
-            }
+        // Validate customer information.
+        check(
+            'full_name',
+            isValidFullName(fullName),
+            'Please enter your first and last name.'
+        );
+
+        check(
+            'phone',
+            isValidUKPhone(phone),
+            'Please enter a valid UK phone number.'
+        );
+
+        check(
+            'email',
+            isValidEmail(email),
+            'Please enter a valid email address.'
+        );
+
+        check(
+            'address',
+            isValidUKAddress(streetAddress),
+            'Please enter your property address.'
+        );
+
+        check(
+            'postcode',
+            isValidUKPostcode(postcodeInput),
+            'Please enter a valid UK postcode (e.g. BN21 4TL).'
+        );
+
+        check(
+            'service_type',
+            Boolean(serviceType),
+            'Please select a service.'
+        );
+
+        check(
+            'preferred_time',
+            Boolean(preferredTime),
+            'Please select a preferred time slot.'
+        );
+
+        updateMinimumBookingDate();
+
+        check(
+            'preferred_date',
+            Boolean(preferredDate) && preferredDate >= tomorrowISO(),
+            'Please select a date from tomorrow onwards.'
+        );
+
+        if (invalid) {
+            showGeneralError(
+                'Please correct the highlighted fields above before submitting.'
+            );
             return;
         }
 
-        // 4. Submission to Supabase
-        const submitBtn = document.getElementById('submit-booking-btn');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting Booking...';
+        // Keep the existing Supabase address column.
+        const fullAddress = `${streetAddress}, ${postcode}`;
+
+        const button = document.getElementById('submit-booking-btn');
+
+        button.disabled = true;
+        button.textContent = 'Submitting Request...';
 
         try {
-            // Count existing bookings to display sequential reference code
-            const { count } = await supabaseClient
-                .from('bookings')
-                .select('*', { count: 'exact', head: true });
+            if (typeof supabaseClient === 'undefined') {
+                throw new Error('Booking service unavailable.');
+            }
 
-            const nextSeq = (count || 0) + 1;
-            const refCode = `#JEB-${String(nextSeq).padStart(3, '0')}`;
-
+            // Submit booking request to Supabase.
             const { data, error } = await supabaseClient
                 .from('bookings')
                 .insert([{
                     full_name: fullName,
-                    phone: phone,
-                    email: email,
-                    address: address,
+                    phone,
+                    email,
+                    address: fullAddress,
                     service_type: serviceType,
                     preferred_time: preferredTime,
                     preferred_date: preferredDate,
@@ -190,40 +264,94 @@ if (bookingForm) {
                 }])
                 .select();
 
-            if (error) throw error;
-
-            // Show Confirmation Modal
-            showSuccessModal(refCode, serviceType, preferredDate, preferredTime, address);
-            bookingForm.reset();
-
-        } catch (err) {
-            console.error('Booking submission error:', err);
-            const banner = document.getElementById('form-general-error');
-            if (banner) {
-                banner.textContent = 'Could not submit your booking: ' + (err.message || 'Please check your connection and try again.');
-                banner.style.display = 'block';
+            if (error) {
+                throw error;
             }
+
+            const booking = data?.[0];
+
+            if (!booking) {
+                throw new Error(
+                    'Booking response could not be verified.'
+                );
+            }
+
+            // Customer-facing reference based on the booking UUID.
+            // The complete UUID remains the authoritative database ID.
+            const ref = booking.id
+                ? `#JEB-${String(booking.id).replace(/-/g, '').slice(0, 8).toUpperCase()}`
+                : 'Reference pending';
+
+            showSuccessModal(
+                ref,
+                serviceType,
+                preferredDate,
+                preferredTime,
+                fullAddress
+            );
+
+            bookingForm.reset();
+            updateMinimumBookingDate();
+
+        } catch (error) {
+            console.error('Booking request error:', error);
+
+            showGeneralError(
+                'We could not verify your booking request. Please contact Jebbett Gardening before submitting again.'
+            );
+
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Submit Booking Request →';
+            button.disabled = false;
+            button.textContent = 'Submit Booking Request →';
         }
     });
 }
 
+// =====================================================
+// Booking request success modal
+// =====================================================
+
 function showSuccessModal(ref, service, date, time, address) {
     document.getElementById('modal-ref-code').textContent = ref;
-    document.getElementById('modal-summary-service').textContent = service.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    document.getElementById('modal-summary-date').textContent = new Date(date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    const select = document.getElementById('service_type');
+
+    const option = Array.from(select?.options || [])
+        .find(item => item.value === service);
+
+    document.getElementById('modal-summary-service').textContent =
+        option?.textContent.trim() || service.replace(/-/g, ' ');
+
+    const [year, month, day] = date.split('-').map(Number);
+
+    document.getElementById('modal-summary-date').textContent =
+        new Date(year, month - 1, day).toLocaleDateString('en-GB', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
     document.getElementById('modal-summary-time').textContent = time;
+
     document.getElementById('modal-summary-address').textContent = address;
 
     const modal = document.getElementById('booking-success-modal');
-    if (modal) modal.style.display = 'flex';
+
+    if (modal) {
+        modal.style.display = 'flex';
+    }
 }
 
+// Close the modal and return to the homepage.
 function closeSuccessModal() {
     const modal = document.getElementById('booking-success-modal');
-    if (modal) modal.style.display = 'none';
+
+    if (modal) {
+        modal.style.display = 'none';
+    }
+
     window.location.href = 'index.html';
 }
+
 window.closeSuccessModal = closeSuccessModal;

@@ -2297,3 +2297,42 @@ footer {
         padding: 15px 20px;
     }
 }
+
+/* ── Booking address and postcode fields ── */
+
+.booking-address-row {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 16px;
+}
+
+.booking-address-row .form-group {
+    min-width: 0;
+}
+
+.booking-address-row input {
+    width: 100%;
+}
+
+@media (max-width: 600px) {
+    .booking-address-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+}
+
+/* Hidden booking UI and honeypot */
+
+.booking-honeypot {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#booking-success-modal[hidden],
+#cookie-notice[hidden],
+#form-general-error[hidden] {
+    display: none;
+}
